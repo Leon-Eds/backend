@@ -1,0 +1,6 @@
+@LeonEdBackend_HostAddress = http://localhost:5252
+
+GET {{LeonEdBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
