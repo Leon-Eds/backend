@@ -23,10 +23,17 @@ builder.Services.AddControllers()
     });
 
 // Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+                       ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
-// Auto-convert Render's "postgres://" URL to Npgsql format
-if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new Exception("CRITICAL ERROR: Database connection string is missing! Please set 'ConnectionStrings__DefaultConnection' or 'DATABASE_URL' in your environment variables.");
+}
+
+// Auto-convert Render's "postgres://" or "postgresql://" URL to Npgsql format
+if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) || 
+    connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
 {
     var uri = new Uri(connectionString);
     var userInfo = uri.UserInfo.Split(':');
@@ -36,7 +43,7 @@ if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("post
     var user = userInfo.Length > 0 ? userInfo[0] : "";
     var password = userInfo.Length > 1 ? userInfo[1] : "";
 
-    connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode=Prefer;Trust Server Certificate=true";
+    connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;";
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
