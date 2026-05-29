@@ -21,6 +21,12 @@ namespace LeonEdBackend.Data
         public DbSet<TeacherSubjectAssignment> TeacherSubjectAssignments => Set<TeacherSubjectAssignment>();
         public DbSet<ClassSubject> ClassSubjects => Set<ClassSubject>();
 
+        // Month 2: Academic Workflow & Result Processing
+        public DbSet<GradingRule> GradingRules => Set<GradingRule>();
+        public DbSet<Score> Scores => Set<Score>();
+        public DbSet<Result> Results => Set<Result>();
+        public DbSet<FeePayment> FeePayments => Set<FeePayment>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -167,6 +173,120 @@ namespace LeonEdBackend.Data
                       .WithMany(s => s.ClassSubjects)
                       .HasForeignKey(e => e.SubjectId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ==================== GradingRule ====================
+            modelBuilder.Entity<GradingRule>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.SchoolId, e.Grade }).IsUnique();
+                entity.Property(e => e.Grade).HasConversion<string>().HasMaxLength(5);
+                entity.HasOne(e => e.School)
+                      .WithMany()
+                      .HasForeignKey(e => e.SchoolId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ==================== Score ====================
+            modelBuilder.Entity<Score>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.SchoolId, e.StudentId, e.SubjectId, e.TermId }).IsUnique();
+                entity.HasIndex(e => new { e.SchoolId, e.ClassId, e.SubjectId, e.TermId });
+                entity.Property(e => e.Grade).HasConversion<string>().HasMaxLength(5);
+                entity.Property(e => e.FirstCA).HasPrecision(5, 2);
+                entity.Property(e => e.SecondCA).HasPrecision(5, 2);
+                entity.Property(e => e.Exam).HasPrecision(5, 2);
+                entity.Property(e => e.Total).HasPrecision(6, 2);
+                entity.HasOne(e => e.School)
+                      .WithMany()
+                      .HasForeignKey(e => e.SchoolId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Student)
+                      .WithMany()
+                      .HasForeignKey(e => e.StudentId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Subject)
+                      .WithMany()
+                      .HasForeignKey(e => e.SubjectId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Class)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClassId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.Term)
+                      .WithMany()
+                      .HasForeignKey(e => e.TermId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.AcademicSession)
+                      .WithMany()
+                      .HasForeignKey(e => e.AcademicSessionId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.EnteredByTeacher)
+                      .WithMany()
+                      .HasForeignKey(e => e.EnteredByTeacherId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ==================== Result ====================
+            modelBuilder.Entity<Result>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.SchoolId, e.StudentId, e.TermId }).IsUnique();
+                entity.HasIndex(e => new { e.SchoolId, e.ClassId, e.TermId });
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.TotalScore).HasPrecision(8, 2);
+                entity.Property(e => e.Average).HasPrecision(6, 2);
+                entity.HasOne(e => e.School)
+                      .WithMany()
+                      .HasForeignKey(e => e.SchoolId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Student)
+                      .WithMany()
+                      .HasForeignKey(e => e.StudentId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Class)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClassId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.Term)
+                      .WithMany()
+                      .HasForeignKey(e => e.TermId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.AcademicSession)
+                      .WithMany()
+                      .HasForeignKey(e => e.AcademicSessionId)
+                      .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // ==================== FeePayment ====================
+            modelBuilder.Entity<FeePayment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.SchoolId, e.StudentId, e.TermId }).IsUnique();
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.AmountDue).HasPrecision(12, 2);
+                entity.Property(e => e.AmountPaid).HasPrecision(12, 2);
+                entity.HasOne(e => e.School)
+                      .WithMany()
+                      .HasForeignKey(e => e.SchoolId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Student)
+                      .WithMany()
+                      .HasForeignKey(e => e.StudentId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Term)
+                      .WithMany()
+                      .HasForeignKey(e => e.TermId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.AcademicSession)
+                      .WithMany()
+                      .HasForeignKey(e => e.AcademicSessionId)
+                      .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.ClearedByUser)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClearedByUserId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }

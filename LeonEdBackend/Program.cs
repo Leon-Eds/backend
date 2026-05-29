@@ -59,6 +59,16 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IAcademicSessionService, AcademicSessionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
+// Month 2: Academic Workflow & Result Processing
+builder.Services.AddScoped<IGradingService, GradingService>();
+builder.Services.AddScoped<IScoreService, ScoreService>();
+builder.Services.AddScoped<IResultService, ResultService>();
+builder.Services.AddScoped<IFeeService, FeeService>();
+builder.Services.AddScoped<IReportCardService, ReportCardService>();
+
+// QuestPDF license configuration
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
