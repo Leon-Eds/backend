@@ -36,10 +36,10 @@ namespace LeonEdBackend.Services.Implementations
             var existingSuperAdmin = await _context.Users
                 .AnyAsync(u => u.Role == UserRole.SuperAdmin);
 
-            // if (existingSuperAdmin)
-            // {
-            //     return ApiResponse<AuthResponse>.FailResponse("A Super Admin already exists.");
-            // }
+            if (existingSuperAdmin)
+            {
+                return ApiResponse<AuthResponse>.FailResponse("A Super Admin already exists.");
+            }
 
             var existingEmail = await _context.Users.AnyAsync(u => u.Email == request.Email.ToLower());
             if (existingEmail)

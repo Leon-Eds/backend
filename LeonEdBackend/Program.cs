@@ -22,6 +22,28 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
+// CORS policy
+var allowedOrigins = builder.Configuration["AllowedCorsOrigins"];
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DefaultCorsPolicy", policy =>
+    {
+        if (builder.Environment.IsDevelopment() || string.IsNullOrWhiteSpace(allowedOrigins))
+        {
+            // Development fallback: allow local testing.
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+    });
+});
+
 // Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
                        ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
@@ -125,7 +147,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    // db.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.
@@ -137,11 +159,10 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction()) // Enable
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<LeonEdBackend.Middleware.ErrorHandlingMiddleware>();
+
 // CORS
-app.UseCors(x => x
-    .AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader());
+app.UseCors("DefaultCorsPolicy");
 
 app.UseAuthentication();
 app.UseTenantMiddleware(); // Custom middleware to extract SchoolId
