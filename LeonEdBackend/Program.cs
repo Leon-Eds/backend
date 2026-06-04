@@ -65,9 +65,18 @@ if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCas
     var user = userInfo.Length > 0 ? userInfo[0] : "";
     var password = userInfo.Length > 1 ? userInfo[1] : "";
 
-    connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password};Pooling=true;";
+    connectionString =
+    $"Host={host};" +
+    $"Port={port};" +
+    $"Database={database};" +
+    $"Username={user};" +
+    $"Password={password};" +
+    $"SSL Mode=Require;" +
+    $"Trust Server Certificate=true;" +
+    $"Pooling=true;";
 }
-
+Console.WriteLine("Hidden connection string (for debugging purposes only, remove in production!):");
+Console.WriteLine(connectionString);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
