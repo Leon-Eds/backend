@@ -1,21 +1,34 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
+# Build stage
+FROM node:20-alpine AS builder
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /src/
-# Try just copying everything first
+WORKDIR /app
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci
+
 COPY . .
-RUN dotnet restore "LeonEdBackend/LeonEdBackend.csproj"
-RUN dotnet build "LeonEdBackend/LeonEdBackend.csproj" -c Release -o /app/build
 
-FROM build AS publish
-RUN dotnet publish "LeonEdBackend/LeonEdBackend.csproj" -c Release -o /app/publish
+RUN npx prisma generate
+RUN npm run build
 
-FROM base AS final
+# Production stage
+FROM node:20-alpine AS runner
+
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "LeonEdBackend.dll"]
 
-#changes...ignore
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm ci --only=production
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+EXPOSE 5000
+
+ENV PORT=5000
+ENV NODE_ENV=production
+
+CMD ["node", "dist/index.js"]

@@ -1,0 +1,351 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SuperAdmin
+  SchoolAdmin
+  Teacher
+  Student
+}
+
+enum SubscriptionPlan {
+  Free
+  Plus
+  Premium
+}
+
+enum SubscriptionStatus {
+  Active
+  Suspended
+  Expired
+}
+
+enum StudentStatus {
+  Active
+  Graduated
+  Archived
+  Suspended
+}
+
+enum Gender {
+  Male
+  Female
+}
+
+enum TermNumber {
+  First
+  Second
+  Third
+}
+
+enum ResultStatus {
+  Draft
+  Submitted
+  Approved
+  Published
+}
+
+enum Grade {
+  A
+  B
+  C
+  D
+  E
+  F
+}
+
+enum PaymentStatus {
+  Pending
+  Cleared
+  Rejected
+}
+
+model School {
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String             @db.VarChar(200)
+  address            String             @default("") @db.VarChar(500)
+  contactEmail       String             @unique @db.VarChar(150)
+  contactPhone       String             @default("") @db.VarChar(30)
+  logoUrl            String             @default("") @db.VarChar(500)
+  slug               String             @unique @db.VarChar(200)
+  subscriptionPlan   SubscriptionPlan   @default(Free)
+  subscriptionStatus SubscriptionStatus @default(Active)
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime?          @updatedAt
+
+  users            User[]
+  students         Student[]
+  teachers         Teacher[]
+  classes          Class[]
+  subjects         Subject[]
+  academicSessions AcademicSession[]
+  gradingRules     GradingRule[]
+  scores           Score[]
+  results          Result[]
+  feePayments      FeePayment[]
+}
+
+model User {
+  id                 String             @id @default(uuid()) @db.Uuid
+  schoolId           String?            @db.Uuid
+  name               String             @default("") @db.VarChar(150)
+  email              String             @unique @db.VarChar(200)
+  passwordHash       String
+  role               UserRole
+  isActive           Boolean            @default(true)
+  refreshToken       String?
+  refreshTokenExpiry DateTime?
+  lastLogin          DateTime?
+  createdAt          DateTime           @default(now())
+
+  school             School?            @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  students           Student[]          @relation("UserToStudent")
+  teachers           Teacher[]          @relation("UserToTeacher")
+  clearedFeePayments FeePayment[]       @relation("UserToClearedByUser")
+}
+
+model Student {
+  id              String        @id @default(uuid()) @db.Uuid
+  schoolId        String        @db.Uuid
+  classId         String?       @db.Uuid
+  userId          String?       @db.Uuid
+  fullName        String        @db.VarChar(200)
+  admissionNumber String        @db.VarChar(50)
+  gender          Gender
+  dateOfBirth     DateTime?     @db.Date
+  parentName      String        @default("") @db.VarChar(200)
+  parentPhone     String        @default("") @db.VarChar(30)
+  parentEmail     String        @default("") @db.VarChar(150)
+  status          StudentStatus @default(Active)
+  enrolledAt      DateTime      @default(now())
+
+  school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class           Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
+  user            User?         @relation("UserToStudent", fields: [userId], references: [id], onDelete: SetNull)
+  scores          Score[]
+  results         Result[]
+  feePayments     FeePayment[]
+
+  @@unique([schoolId, admissionNumber])
+  @@index([schoolId])
+}
+
+model Teacher {
+  id         String   @id @default(uuid()) @db.Uuid
+  schoolId   String   @db.Uuid
+  userId     String   @db.Uuid
+  fullName   String   @db.VarChar(200)
+  email      String   @default("") @db.VarChar(200)
+  phone      String   @default("") @db.VarChar(30)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  school             School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user               User                      @relation("UserToTeacher", fields: [userId], references: [id], onDelete: Cascade)
+  subjectAssignments TeacherSubjectAssignment[]
+  enteredScores      Score[]
+
+  @@index([schoolId])
+}
+
+model Class {
+  id                String    @id @default(uuid()) @db.Uuid
+  schoolId          String    @db.Uuid
+  academicSessionId String?   @db.Uuid
+  name              String    @db.VarChar(100)
+  arm               String    @default("") @db.VarChar(50)
+  level             Int       @default(1)
+  createdAt         DateTime  @default(now())
+
+  school             School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicSession    AcademicSession?          @relation(fields: [academicSessionId], references: [id], onDelete: SetNull)
+  students           Student[]
+  teacherAssignments TeacherSubjectAssignment[]
+  classSubjects      ClassSubject[]
+  scores             Score[]
+  results            Result[]
+
+  @@index([schoolId])
+}
+
+model Subject {
+  id        String   @id @default(uuid()) @db.Uuid
+  schoolId  String   @db.Uuid
+  name      String   @db.VarChar(200)
+  code      String   @default("") @db.VarChar(50)
+  createdAt DateTime @default(now())
+
+  school             School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherAssignments TeacherSubjectAssignment[]
+  classSubjects      ClassSubject[]
+  scores             Score[]
+
+  @@unique([schoolId, name])
+}
+
+model AcademicSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  schoolId  String    @db.Uuid
+  name      String    @db.VarChar(100)
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  isCurrent Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classes     Class[]
+  terms       Term[]
+  scores      Score[]
+  results     Result[]
+  feePayments FeePayment[]
+
+  @@index([schoolId])
+}
+
+model Term {
+  id                String     @id @default(uuid()) @db.Uuid
+  academicSessionId String     @db.Uuid
+  termNumber        TermNumber
+  startDate         DateTime   @db.Date
+  endDate           DateTime   @db.Date
+  isCurrent         Boolean    @default(false)
+  resultsPublished  Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
+  scores          Score[]
+  results         Result[]
+  feePayments     FeePayment[]
+
+  @@unique([academicSessionId, termNumber])
+}
+
+model TeacherSubjectAssignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  teacherId String   @db.Uuid
+  subjectId String   @db.Uuid
+  classId   String   @db.Uuid
+  assignedAt DateTime @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, subjectId, classId])
+}
+
+model ClassSubject {
+  id        String   @id @default(uuid()) @db.Uuid
+  classId   String   @db.Uuid
+  subjectId String   @db.Uuid
+  assignedAt DateTime @default(now())
+
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+}
+
+model GradingRule {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @db.Uuid
+  grade    Grade
+  minScore Int
+  maxScore Int
+  remark   String @default("") @db.VarChar(100)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, grade])
+}
+
+model Score {
+  id                 String   @id @default(uuid()) @db.Uuid
+  schoolId           String   @db.Uuid
+  studentId          String   @db.Uuid
+  subjectId          String   @db.Uuid
+  classId            String   @db.Uuid
+  termId             String   @db.Uuid
+  academicSessionId  String   @db.Uuid
+  firstCA            Decimal  @db.Decimal(5, 2)
+  secondCA           Decimal  @db.Decimal(5, 2)
+  exam               Decimal  @db.Decimal(5, 2)
+  total              Decimal  @db.Decimal(6, 2)
+  grade              Grade
+  remark             String   @default("") @db.VarChar(200)
+  enteredByTeacherId String?  @db.Uuid
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime? @updatedAt
+
+  school           School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student          Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject          Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class            Class           @relation(fields: [classId], references: [id], onDelete: NoAction)
+  term             Term            @relation(fields: [termId], references: [id], onDelete: NoAction)
+  academicSession  AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: NoAction)
+  enteredByTeacher Teacher?        @relation(fields: [enteredByTeacherId], references: [id], onDelete: SetNull)
+
+  @@unique([schoolId, studentId, subjectId, termId])
+  @@index([schoolId, classId, subjectId, termId])
+}
+
+model Result {
+  id                String       @id @default(uuid()) @db.Uuid
+  schoolId          String       @db.Uuid
+  studentId         String       @db.Uuid
+  classId           String       @db.Uuid
+  termId            String       @db.Uuid
+  academicSessionId String       @db.Uuid
+  totalScore        Decimal      @db.Decimal(8, 2)
+  average           Decimal      @db.Decimal(6, 2)
+  position          Int
+  subjectCount      Int
+  status            ResultStatus @default(Draft)
+  teacherComment    String       @default("") @db.VarChar(500)
+  adminComment      String       @default("") @db.VarChar(500)
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime?    @updatedAt
+
+  school          School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class           Class           @relation(fields: [classId], references: [id], onDelete: NoAction)
+  term            Term            @relation(fields: [termId], references: [id], onDelete: NoAction)
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: NoAction)
+
+  @@unique([schoolId, studentId, termId])
+  @@index([schoolId, classId, termId])
+}
+
+model FeePayment {
+  id                String        @id @default(uuid()) @db.Uuid
+  schoolId          String        @db.Uuid
+  studentId         String        @db.Uuid
+  termId            String        @db.Uuid
+  academicSessionId String        @db.Uuid
+  amountDue         Decimal       @db.Decimal(12, 2)
+  amountPaid        Decimal       @db.Decimal(12, 2)
+  status            PaymentStatus @default(Pending)
+  clearedByUserId   String?       @db.Uuid
+  clearedAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime?     @updatedAt
+
+  school          School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term            Term            @relation(fields: [termId], references: [id], onDelete: NoAction)
+  academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: NoAction)
+  clearedByUser   User?           @relation("UserToClearedByUser", fields: [clearedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([schoolId, studentId, termId])
+}
