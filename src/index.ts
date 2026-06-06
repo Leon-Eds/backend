@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
+import path from "path";
 
 // Import Middlewares
 import { errorMiddleware } from "./middlewares/error.middleware";
@@ -56,7 +57,10 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ["./src/routes/*.ts"],
+  apis: [
+    path.join(__dirname, "routes", "*.ts"),
+    path.join(__dirname, "routes", "*.js"),
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
