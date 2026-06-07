@@ -220,4 +220,60 @@ export class AuthService {
 
     return successResponse(true, "Password changed successfully.");
   }
+
+  static async forgotPassword(request: any) {
+    const user = await prisma.user.findFirst({
+      where: { email: request.email.toLowerCase() },
+    });
+
+    // Always return success to prevent email enumeration attacks
+    if (!user) {
+      return successResponse(true, "If an account with that email exists, a password reset link has been sent.");
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: resetToken,
+        passwordResetExpiry: resetExpiry,
+      },
+    });
+
+    // In production, send email with reset link containing the token.
+    // For now, return the token directly for development/testing.
+    return successResponse(
+      { resetToken, expiresAt: resetExpiry },
+      "If an account with that email exists, a password reset link has been sent."
+    );
+  }
+
+  static async resetPassword(request: any) {
+    const user = await prisma.user.findFirst({
+      where: { passwordResetToken: request.token },
+    });
+
+    if (!user) {
+      return failResponse("Invalid or expired reset token.");
+    }
+
+    if (!user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+      return failResponse("Reset token has expired. Please request a new one.");
+    }
+
+    const hashedPassword = await hashPassword(request.newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+      },
+    });
+
+    return successResponse(true, "Password reset successfully. You can now log in with your new password.");
+  }
 }

@@ -8,6 +8,8 @@ import {
   createSuperAdminSchema,
   refreshTokenSchema,
   changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../validations/auth.validation";
 
 const router = Router();
@@ -88,6 +90,18 @@ router.post("/create-super-admin", validateBody(createSuperAdminSchema), AuthCon
  *               subscriptionPlan:
  *                 type: string
  *                 enum: [Free, Plus, Premium]
+ *               schoolType:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               state:
+ *                 type: string
+ *               country:
+ *                 type: string
+ *               studentCount:
+ *                 type: integer
+ *               adminRole:
+ *                 type: string
  *     responses:
  *       201:
  *         description: School registered successfully
@@ -179,5 +193,59 @@ router.post("/refresh-token", validateBody(refreshTokenSchema), AuthController.r
  *         description: Unauthorized
  */
 router.post("/change-password", authMiddleware(), validateBody(changePasswordSchema), AuthController.changePassword);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset link
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Password reset token generated (in production, sent via email)
+ *       400:
+ *         description: Bad request
+ */
+router.post("/forgot-password", validateBody(forgotPasswordSchema), AuthController.forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password using a reset token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.post("/reset-password", validateBody(resetPasswordSchema), AuthController.resetPassword);
 
 export default router;

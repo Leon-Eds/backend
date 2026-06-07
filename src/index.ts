@@ -22,6 +22,7 @@ import resultRoutes from "./routes/result.routes";
 import feeRoutes from "./routes/fee.routes";
 import reportCardRoutes from "./routes/report-card.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
+import announcementRoutes from "./routes/announcement.routes";
 
 dotenv.config();
 
@@ -122,6 +123,9 @@ app.get("/api-docs", (req, res) => {
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "healthy", timestamp: new Date() });
 });
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "healthy", timestamp: new Date() });
+});
 
 // Register Api Routes
 app.use("/api/auth", authRoutes);
@@ -137,6 +141,7 @@ app.use("/api/result", resultRoutes);
 app.use("/api/fee", feeRoutes);
 app.use("/api/reportcard", reportCardRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/announcement", announcementRoutes);
 
 // Error Handling Middleware (Must be registered last)
 app.use(errorMiddleware);
