@@ -13,6 +13,12 @@ export const registerSchoolSchema = z.object({
   phone: z.string().max(30).optional().default(""),
   address: z.string().max(500).optional().default(""),
   subscriptionPlan: z.enum(["Free", "Plus", "Premium"]).optional().default("Free"),
+  schoolType: z.string().max(100).optional().nullable(),
+  city: z.string().max(100).optional().nullable(),
+  state: z.string().max(100).optional().nullable(),
+  country: z.string().max(100).optional().nullable(),
+  studentCount: z.preprocess((val) => (val === "" || val === undefined ? undefined : Number(val)), z.number().int().nonnegative().optional().nullable()),
+  adminRole: z.string().max(100).optional().nullable(),
 });
 
 export const createSuperAdminSchema = z.object({

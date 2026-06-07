@@ -9,6 +9,8 @@ export const createStudentSchema = z.object({
   parentName: z.string().max(200).optional().default(""),
   parentPhone: z.string().max(30).optional().default(""),
   parentEmail: z.string().max(200).optional().default(""),
+  arm: z.string().max(50).optional().nullable(),
+  bloodGroup: z.string().max(20).optional().nullable(),
 });
 
 export const updateStudentSchema = z.object({
@@ -20,4 +22,6 @@ export const updateStudentSchema = z.object({
   parentPhone: z.string().max(30).optional(),
   parentEmail: z.string().max(200).optional(),
   status: z.enum(["Active", "Graduated", "Archived", "Suspended"]).optional(),
+  arm: z.string().max(50).optional().nullable(),
+  bloodGroup: z.string().max(20).optional().nullable(),
 });

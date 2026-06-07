@@ -63,18 +63,40 @@ export class DashboardService {
       where: { schoolId },
     });
 
+    const pendingResults = await prisma.result.count({
+      where: {
+        schoolId,
+        status: { in: ["Draft", "Submitted"] },
+        ...(currentTerm ? { termId: currentTerm.id } : {}),
+      },
+    });
+
+    let termProgress = 0;
+    if (currentTerm) {
+      const start = currentTerm.startDate.getTime();
+      const end = currentTerm.endDate.getTime();
+      const now = Date.now();
+      if (end > start) {
+        const progress = ((now - start) / (end - start)) * 100;
+        termProgress = Math.max(0, Math.min(100, Math.round(progress)));
+      }
+    }
+
     return successResponse({
       schoolId: school.id,
       schoolName: school.name,
       subscriptionPlan: school.subscriptionPlan,
       totalStudents,
       totalTeachers,
+      totalFaculty: totalTeachers,
       totalClasses,
       totalSubjects,
       maxStudents: this.getMaxStudents(school.subscriptionPlan),
       maxTeachers: this.getMaxTeachers(school.subscriptionPlan),
       currentSession: currentSession?.name || null,
       currentTerm: currentTerm?.termNumber || null,
+      pendingResults,
+      termProgress,
     });
   }
 

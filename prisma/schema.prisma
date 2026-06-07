@@ -74,6 +74,11 @@ model School {
   contactEmail       String             @unique @db.VarChar(150)
   contactPhone       String             @default("") @db.VarChar(30)
   logoUrl            String             @default("") @db.VarChar(500)
+  schoolType         String?            @db.VarChar(100)
+  city               String?            @db.VarChar(100)
+  state              String?            @db.VarChar(100)
+  country            String?            @db.VarChar(100)
+  studentCount       Int?
   slug               String             @unique @db.VarChar(200)
   subscriptionPlan   SubscriptionPlan   @default(Free)
   subscriptionStatus SubscriptionStatus @default(Active)
@@ -104,6 +109,7 @@ model User {
   refreshToken       String?
   refreshTokenExpiry DateTime?
   lastLogin          DateTime?
+  adminRole          String?            @db.VarChar(100)
   createdAt          DateTime           @default(now())
 
   school             School?            @relation(fields: [schoolId], references: [id], onDelete: SetNull)
@@ -125,6 +131,8 @@ model Student {
   parentPhone     String        @default("") @db.VarChar(30)
   parentEmail     String        @default("") @db.VarChar(150)
   status          StudentStatus @default(Active)
+  arm             String?       @db.VarChar(50)
+  bloodGroup      String?       @db.VarChar(20)
   enrolledAt      DateTime      @default(now())
 
   school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)

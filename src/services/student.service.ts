@@ -29,13 +29,15 @@ export class StudentService {
       classId: s.classId,
       className: s.class ? `${s.class.name} ${s.class.arm}`.trim() : null,
       enrolledAt: s.enrolledAt,
+      createdAt: s.enrolledAt, // map enrolledAt to createdAt for frontend UI
       systemEmail: s.user?.email || null,
+      arm: s.arm || null,
+      bloodGroup: s.bloodGroup || null,
     };
   }
 
   static async getStudents(schoolId: string, params: any) {
-    const pageNumber = parseInt(params.pageNumber || "1", 10);
-    const pageSize = parseInt(params.pageSize || "20", 10);
+    const isAll = params.all === "true" || params.pageSize === "0" || params.pageSize === 0;
     const search = params.search ? params.search.toLowerCase() : "";
 
     const where: any = { schoolId };
@@ -48,11 +50,16 @@ export class StudentService {
 
     const totalCount = await prisma.student.count({ where });
 
+    const pageNumber = isAll ? 1 : parseInt(params.pageNumber || "1", 10);
+    const pageSize = isAll ? (totalCount || 1) : parseInt(params.pageSize || "20", 10);
+
     const students = await prisma.student.findMany({
       where,
       orderBy: { enrolledAt: "desc" },
-      skip: (pageNumber - 1) * pageSize,
-      take: pageSize,
+      ...(isAll ? {} : {
+        skip: (pageNumber - 1) * pageSize,
+        take: pageSize,
+      }),
       include: {
         class: true,
         user: true,
@@ -155,6 +162,8 @@ export class StudentService {
         parentPhone: request.parentPhone || "",
         parentEmail: request.parentEmail || "",
         status: "Active",
+        arm: request.arm || null,
+        bloodGroup: request.bloodGroup || null,
       },
       include: {
         class: true,
@@ -188,6 +197,8 @@ export class StudentService {
         parentPhone: request.parentPhone !== undefined ? request.parentPhone : undefined,
         parentEmail: request.parentEmail !== undefined ? request.parentEmail : undefined,
         status: request.status !== undefined ? request.status : undefined,
+        arm: request.arm !== undefined ? request.arm : undefined,
+        bloodGroup: request.bloodGroup !== undefined ? request.bloodGroup : undefined,
       },
       include: {
         class: true,

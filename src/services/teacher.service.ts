@@ -37,8 +37,7 @@ export class TeacherService {
   }
 
   static async getTeachers(schoolId: string, params: any) {
-    const pageNumber = parseInt(params.pageNumber || "1", 10);
-    const pageSize = parseInt(params.pageSize || "20", 10);
+    const isAll = params.all === "true" || params.pageSize === "0" || params.pageSize === 0;
     const search = params.search ? params.search.toLowerCase() : "";
 
     const where: any = { schoolId };
@@ -51,11 +50,16 @@ export class TeacherService {
 
     const totalCount = await prisma.teacher.count({ where });
 
+    const pageNumber = isAll ? 1 : parseInt(params.pageNumber || "1", 10);
+    const pageSize = isAll ? (totalCount || 1) : parseInt(params.pageSize || "20", 10);
+
     const teachers = await prisma.teacher.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (pageNumber - 1) * pageSize,
-      take: pageSize,
+      ...(isAll ? {} : {
+        skip: (pageNumber - 1) * pageSize,
+        take: pageSize,
+      }),
       include: {
         subjectAssignments: {
           include: {

@@ -102,6 +102,11 @@ export class AuthService {
         subscriptionPlan: request.subscriptionPlan || "Free",
         subscriptionStatus: "Active",
         isActive: true,
+        schoolType: request.schoolType || null,
+        city: request.city || null,
+        state: request.state || null,
+        country: request.country || null,
+        studentCount: request.studentCount !== undefined ? request.studentCount : null,
       },
     });
 
@@ -115,6 +120,7 @@ export class AuthService {
         passwordHash: hashedPassword,
         role: "SchoolAdmin",
         isActive: true,
+        adminRole: request.adminRole || null,
       },
     });
 
