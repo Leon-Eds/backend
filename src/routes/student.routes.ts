@@ -137,6 +137,9 @@ router.get("/:id", StudentController.getById);
  *                 type: string
  *               parentEmail:
  *                 type: string
+ *               password:
+ *                 type: string
+ *                 description: Optional login password for the student account (defaults to Student@123! if not provided)
  *     responses:
  *       201:
  *         description: Student created successfully
