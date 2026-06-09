@@ -1,7 +1,7 @@
 /**
  * Utility to wrap body content in a premium, responsive HTML shell.
  */
-function wrapInShell(title: string, bodyHtml: string): string {
+function wrapInShell(title: string, headerTitle: string, bodyHtml: string): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -9,113 +9,182 @@ function wrapInShell(title: string, bodyHtml: string): string {
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
       <style>
         body {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background-color: #f8fafc;
-          color: #334155;
+          background-color: #f3f4f6;
+          color: #374151;
           margin: 0;
           padding: 0;
           -webkit-font-smoothing: antialiased;
         }
+        .outer-container {
+          width: 100%;
+          background-color: #f3f4f6;
+          padding: 40px 0;
+        }
         .container {
           max-width: 600px;
-          margin: 40px auto;
+          margin: 0 auto;
           background: #ffffff;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+          border-radius: 16px;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
           overflow: hidden;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #e5e7eb;
+          padding: 24px;
         }
         .header {
-          background-color: #1e3a8a;
-          background-image: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-          padding: 32px 24px;
+          background: linear-gradient(135deg, #013a25 0%, #004b30 100%);
+          padding: 42px 24px;
           text-align: center;
+          border-radius: 12px;
         }
         .header h1 {
           color: #ffffff;
-          font-size: 24px;
+          font-family: 'Outfit', sans-serif;
+          font-size: 26px;
           font-weight: 700;
           margin: 0;
-          letter-spacing: -0.025em;
+          letter-spacing: -0.02em;
+        }
+        .header p {
+          color: #34d399;
+          font-size: 14px;
+          margin: 8px 0 0;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
         }
         .content {
-          padding: 32px 24px;
+          padding: 32px 8px 16px;
           line-height: 1.6;
+        }
+        .content h2 {
+          color: #004b30;
+          font-family: 'Outfit', sans-serif;
+          font-size: 22px;
+          font-weight: 700;
+          margin: 0 0 16px;
         }
         .content p {
           margin: 0 0 16px;
-          font-size: 16px;
+          font-size: 15px;
+          color: #4b5563;
         }
         .content strong {
-          color: #0f172a;
+          color: #111827;
+        }
+        .alert-box {
+          background-color: #ecfdf5;
+          border-left: 4px solid #004b30;
+          border-radius: 4px;
+          padding: 16px;
+          margin: 24px 0;
+          color: #013a25;
+          font-weight: 500;
+          font-size: 15px;
+        }
+        .alert-box-warning {
+          background-color: #fffbeb;
+          border-left: 4px solid #d97706;
+          border-radius: 4px;
+          padding: 16px;
+          margin: 24px 0;
+          color: #78350f;
+          font-weight: 500;
+          font-size: 15px;
         }
         .card {
-          background-color: #f1f5f9;
-          border-radius: 8px;
+          background-color: #f9fafb;
+          border-radius: 10px;
           padding: 20px;
           margin: 24px 0;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #f3f4f6;
         }
         .card table {
           width: 100%;
           border-collapse: collapse;
         }
         .card td {
-          padding: 8px 0;
+          padding: 10px 0;
           font-size: 15px;
           vertical-align: top;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .card tr:last-child td {
+          border-bottom: none;
         }
         .card td.label {
           font-weight: 600;
-          color: #475569;
-          width: 140px;
+          color: #6b7280;
+          width: 150px;
         }
         .card td.value {
-          color: #0f172a;
+          color: #111827;
+          font-weight: 500;
         }
         .btn {
           display: inline-block;
-          background-color: #2563eb;
+          background-color: #004b30;
           color: #ffffff !important;
           text-decoration: none;
-          padding: 12px 28px;
+          padding: 14px 32px;
           font-weight: 600;
-          border-radius: 6px;
-          margin: 16px 0;
+          border-radius: 8px;
+          margin: 24px 0;
           text-align: center;
-          font-size: 16px;
-          box-shadow: 0 2px 4px rgb(37 99 235 / 0.2);
+          font-size: 15px;
+          box-shadow: 0 4px 6px -1px rgba(0, 75, 48, 0.25);
         }
         .btn:hover {
-          background-color: #1d4ed8;
+          background-color: #013a25;
+        }
+        .btn-orange {
+          display: inline-block;
+          background-color: #b45309;
+          color: #ffffff !important;
+          text-decoration: none;
+          padding: 14px 32px;
+          font-weight: 600;
+          border-radius: 8px;
+          margin: 24px 0;
+          text-align: center;
+          font-size: 15px;
+          box-shadow: 0 4px 6px -1px rgba(180, 83, 9, 0.25);
+        }
+        .btn-orange:hover {
+          background-color: #78350f;
         }
         .footer {
-          background-color: #f8fafc;
-          padding: 24px;
           text-align: center;
-          border-top: 1px solid #e2e8f0;
+          padding: 24px 8px 8px;
           font-size: 13px;
-          color: #64748b;
+          color: #9ca3af;
+          border-top: 1px solid #f3f4f6;
+          margin-top: 32px;
         }
         .footer a {
-          color: #3b82f6;
+          color: #004b30;
           text-decoration: none;
+          font-weight: 600;
         }
       </style>
     </head>
     <body>
-      <div class="container">
-        <div class="header">
-          <h1>LeonEd Africa</h1>
-        </div>
-        <div class="content">
-          ${bodyHtml}
-        </div>
-        <div class="footer">
-          <p>This is an automated message from LeonEd Africa.</p>
-          <p>&copy; ${new Date().getFullYear()} LeonEd Africa. All rights reserved.</p>
+      <div class="outer-container">
+        <div class="container">
+          <div class="header">
+            <h1>${headerTitle}</h1>
+            <p>LeonEd Africa</p>
+          </div>
+          <div class="content">
+            ${bodyHtml}
+          </div>
+          <div class="footer">
+            <p>This is an automated message from LeonEd Africa.</p>
+            <p>&copy; ${new Date().getFullYear()} <a href="https://leoned.app">LeonEd Africa</a>. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </body>
@@ -131,11 +200,16 @@ export const emailTemplates = {
     const subject = `Welcome to LeonEd Africa, ${schoolName}!`;
     const html = wrapInShell(
       subject,
+      `Welcome to LeonEd Africa! 🎓`,
       `
+      <h2>School Registration Successful</h2>
       <p>Hello <strong>${adminName}</strong>,</p>
-      <p>Congratulations! Your school, <strong>${schoolName}</strong>, is now registered on LeonEd Africa.</p>
-      <p>We are excited to help you streamline your academic management, grade reporting, and student-parent communications.</p>
+      <p>Congratulations! Your school is now registered on LeonEd Africa. We are excited to support your academic management journey.</p>
       
+      <div class="alert-box">
+        ✓ Your school administration portal and subdomain are configured and active!
+      </div>
+
       <div class="card">
         <table>
           <tr>
@@ -143,8 +217,8 @@ export const emailTemplates = {
             <td class="value">${schoolName}</td>
           </tr>
           <tr>
-            <td class="label">Portal Subdomain:</td>
-            <td class="value"><strong>${slug}</strong> (leoned.app/${slug})</td>
+            <td class="label">Portal Link:</td>
+            <td class="value"><a href="https://${slug}.leoned.app" style="color: #004b30; font-weight: 600; text-decoration: none;">${slug}.leoned.app</a></td>
           </tr>
           <tr>
             <td class="label">Subscription Plan:</td>
@@ -153,13 +227,13 @@ export const emailTemplates = {
         </table>
       </div>
 
-      <p>To get started, log in to your admin dashboard and configure your classes, subjects, academic sessions, and invite your faculty.</p>
+      <p>To get started, log in to your admin dashboard to set up your academic sessions, register classes and subjects, and invite your teachers.</p>
       
       <div style="text-align: center;">
         <a href="https://leoned.app/login" class="btn" target="_blank">Access Your Dashboard</a>
       </div>
       
-      <p>If you have any questions or need help setting up your portal, reply to this email or contact our support team.</p>
+      <p>If you need any assistance setting up your portal, feel free to reply to this email.</p>
       `
     );
     return { subject, html };
@@ -173,19 +247,24 @@ export const emailTemplates = {
     const resetUrl = `https://leoned.app/reset-password?token=${resetToken}`;
     const html = wrapInShell(
       subject,
+      `Password Reset Request 🔑`,
       `
+      <h2>Reset Your Password</h2>
       <p>Hello <strong>${name}</strong>,</p>
-      <p>You are receiving this email because we received a password reset request for your account.</p>
-      <p>Click the button below to choose a new password. This link will expire in 1 hour.</p>
+      <p>We received a request to reset the password associated with your LeonEd Africa account.</p>
       
-      <div style="text-align: center;">
-        <a href="${resetUrl}" class="btn" target="_blank">Reset Password</a>
+      <div class="alert-box-warning">
+        ⚠ This password reset link will expire in <strong>1 hour</strong>.
       </div>
 
-      <p>If the button doesn't work, copy and paste this URL into your browser:</p>
-      <p style="word-break: break-all; font-size: 14px; color: #475569;">${resetUrl}</p>
+      <div style="text-align: center;">
+        <a href="${resetUrl}" class="btn-orange" target="_blank">Reset Password</a>
+      </div>
+
+      <p>If the button doesn't work, copy and paste the URL below into your browser:</p>
+      <p style="word-break: break-all; font-size: 13px; color: #6b7280; background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #f3f4f6;">${resetUrl}</p>
       
-      <p>If you did not request a password reset, no further action is required; you can safely ignore this email.</p>
+      <p>If you did not request this change, you can safely ignore this email; your password will remain secure.</p>
       `
     );
     return { subject, html };
@@ -198,29 +277,34 @@ export const emailTemplates = {
     const subject = `Welcome to LeonEd Africa — Invitation from ${schoolName}`;
     const html = wrapInShell(
       subject,
+      `Welcome to the Faculty! 🍎`,
       `
+      <h2>Account Credentials Created</h2>
       <p>Hello <strong>${name}</strong>,</p>
-      <p>You have been added as a faculty member at <strong>${schoolName}</strong> on LeonEd Africa.</p>
-      <p>Your portal account has been created successfully. Use the credentials below to log in:</p>
-      
+      <p>You have been added as a faculty member at <strong>${schoolName}</strong> on the LeonEd Africa portal.</p>
+
+      <div class="alert-box">
+        ✓ Your teacher portal profile is set up. Use the credentials below to log in:
+      </div>
+
       <div class="card">
         <table>
           <tr>
-            <td class="label">Portal/School:</td>
+            <td class="label">School:</td>
             <td class="value">${schoolName}</td>
           </tr>
           <tr>
             <td class="label">Login Email:</td>
-            <td class="value"><strong>${systemEmail}</strong></td>
+            <td class="value" style="font-family: monospace; font-size: 15px;"><strong>${systemEmail}</strong></td>
           </tr>
           <tr>
-            <td class="label">Temporary Password:</td>
-            <td class="value"><code>${passwordTemp}</code></td>
+            <td class="label">Password:</td>
+            <td class="value" style="font-family: monospace; font-size: 15px; color: #b45309;">${passwordTemp}</td>
           </tr>
         </table>
       </div>
 
-      <p>For security, please change your password as soon as you log in by navigating to your account settings.</p>
+      <p>For security reasons, we strongly recommend changing this temporary password immediately after your first login.</p>
       
       <div style="text-align: center;">
         <a href="https://leoned.app/login" class="btn" target="_blank">Log In to Portal</a>
@@ -245,11 +329,16 @@ export const emailTemplates = {
     const subject = `Student Account Onboarding — ${schoolName}`;
     const html = wrapInShell(
       subject,
+      `Welcome to the Portal! 📝`,
       `
+      <h2>Student Portal Access Details</h2>
       <p>Dear <strong>${parentName || "Parent/Guardian"}</strong>,</p>
-      <p>We are pleased to inform you that <strong>${studentName}</strong> has been registered at <strong>${schoolName}</strong> on the LeonEd Africa portal.</p>
-      <p>Through this portal, you can view report cards, track attendance, and monitor fee status.</p>
-      
+      <p>We are pleased to inform you that <strong>${studentName}</strong> is registered at <strong>${schoolName}</strong> on the LeonEd Africa portal.</p>
+
+      <div class="alert-box">
+        ✓ You can now monitor grades, check report cards, and track attendance using the portal details below:
+      </div>
+
       <div class="card">
         <table>
           <tr>
@@ -257,21 +346,21 @@ export const emailTemplates = {
             <td class="value">${studentName}</td>
           </tr>
           <tr>
-            <td class="label">Admission Number:</td>
-            <td class="value"><strong>${admissionNumber}</strong></td>
+            <td class="label">Admission No:</td>
+            <td class="value" style="font-family: monospace;"><strong>${admissionNumber}</strong></td>
           </tr>
           <tr>
-            <td class="label">Student Login ID:</td>
-            <td class="value"><strong>${systemEmail}</strong></td>
+            <td class="label">Login Email/ID:</td>
+            <td class="value" style="font-family: monospace;"><strong>${systemEmail}</strong></td>
           </tr>
           <tr>
-            <td class="label">Temporary Password:</td>
-            <td class="value"><code>${passwordTemp}</code></td>
+            <td class="label">Password:</td>
+            <td class="value" style="font-family: monospace; color: #b45309;">${passwordTemp}</td>
           </tr>
         </table>
       </div>
 
-      <p>Please log in using the Student Login ID and password to access the portal.</p>
+      <p>Please click the link below to access the login dashboard:</p>
       
       <div style="text-align: center;">
         <a href="https://leoned.app/login" class="btn" target="_blank">Access Student Portal</a>
@@ -288,10 +377,16 @@ export const emailTemplates = {
     const subject = `New Class Added: ${className} ${arm}`.trim();
     const html = wrapInShell(
       subject,
+      `New Class Configured 🏫`,
       `
-      <p>Hello,</p>
-      <p>This is to confirm that a new class has been created successfully in the <strong>${schoolName}</strong> portal.</p>
+      <h2>Class Setup Completed</h2>
+      <p>Hello Admin,</p>
+      <p>A new class has been created successfully in the <strong>${schoolName}</strong> portal registry.</p>
       
+      <div class="alert-box">
+        ✓ Class ${className} ${arm || ""} is now active and ready for enrollment.
+      </div>
+
       <div class="card">
         <table>
           <tr>
@@ -309,7 +404,7 @@ export const emailTemplates = {
         </table>
       </div>
 
-      <p>You can now assign subjects and enroll students to this class in your dashboard.</p>
+      <p>You can now navigate to your dashboard to assign teachers, attach subjects, or register students to this class.</p>
       `
     );
     return { subject, html };
@@ -322,10 +417,16 @@ export const emailTemplates = {
     const subject = `New Academic Session Created: ${sessionName}`;
     const html = wrapInShell(
       subject,
+      `New Academic Session 📅`,
       `
-      <p>Hello,</p>
-      <p>This is to confirm that a new academic session has been created successfully in the <strong>${schoolName}</strong> portal.</p>
+      <h2>Session Setup Completed</h2>
+      <p>Hello Admin,</p>
+      <p>A new academic session has been created successfully in the <strong>${schoolName}</strong> portal registry.</p>
       
+      <div class="alert-box">
+        ✓ Session <strong>${sessionName}</strong> is now configured.
+      </div>
+
       <div class="card">
         <table>
           <tr>
@@ -343,7 +444,7 @@ export const emailTemplates = {
         </table>
       </div>
 
-      <p>You can set this session as the active/current session inside your term management settings.</p>
+      <p>You can mark this session as active within your school configuration panel to direct grading and registration to this term.</p>
       `
     );
     return { subject, html };
@@ -356,11 +457,16 @@ export const emailTemplates = {
     const subject = "LeonEd Africa — Super Admin Account Created";
     const html = wrapInShell(
       subject,
+      `System Authorized 🛡️`,
       `
+      <h2>Super Admin Configured</h2>
       <p>Hello <strong>${name}</strong>,</p>
-      <p>Your Super Admin account has been successfully initialized on LeonEd Africa.</p>
-      <p>As a Super Admin, you have full administrative privileges to monitor platform metrics, manage schools, subscriptions, and system configurations.</p>
-      
+      <p>Your Super Admin security profile has been successfully initialized on LeonEd Africa.</p>
+
+      <div class="alert-box">
+        ✓ You have full administrative privileges to monitor platform metrics, manage registered schools, and edit billing.
+      </div>
+
       <div class="card">
         <table>
           <tr>
@@ -369,7 +475,7 @@ export const emailTemplates = {
           </tr>
           <tr>
             <td class="label">Login Email:</td>
-            <td class="value"><strong>${email}</strong></td>
+            <td class="value" style="font-family: monospace;"><strong>${email}</strong></td>
           </tr>
         </table>
       </div>
@@ -391,22 +497,25 @@ export const emailTemplates = {
     const subject = "LeonEd Africa — Email Verification OTP";
     const html = wrapInShell(
       subject,
+      `Verify Your Email ✉️`,
       `
+      <h2>One-Time Verification Code</h2>
       <p>Hello <strong>${name}</strong>,</p>
       <p>Thank you for signing up with LeonEd Africa. To complete your registration and verify your email address, please use the following One-Time Password (OTP):</p>
       
-      <div style="text-align: center; margin: 30px 0;">
-        <div style="display: inline-block; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #1e3a8a; background: #f1f5f9; padding: 12px 36px; border-radius: 8px; border: 1px solid #cbd5e1;">
+      <div style="text-align: center; margin: 36px 0;">
+        <div style="display: inline-block; font-family: monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #004b30; background: #ecfdf5; padding: 14px 42px; border-radius: 10px; border: 2px dashed #34d399; box-shadow: 0 4px 6px -1px rgba(0, 75, 48, 0.05);">
           ${otp}
         </div>
       </div>
 
-      <p style="text-align: center; color: #64748b; font-size: 14px;">This OTP is valid for <strong>15 minutes</strong>. Do not share this code with anyone.</p>
+      <div class="alert-box-warning" style="text-align: center;">
+        ⚠ This verification code is active for <strong>15 minutes</strong>. Do not share it with others.
+      </div>
       
-      <p>If you did not initiate this request, please ignore this email or contact support if you have concerns.</p>
+      <p>If you did not initiate this registration request, please disregard this automated notification.</p>
       `
     );
     return { subject, html };
   }
 };
-
