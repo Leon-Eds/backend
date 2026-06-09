@@ -303,7 +303,7 @@ export class AuthService {
 
   static async verifyOtp(request: any) {
     const user = await prisma.user.findUnique({
-      where: { email: request.email.toLowerCase() },
+      where: { email: request.email.toLowerCase().trim() },
       include: { school: true },
     });
 
@@ -361,7 +361,7 @@ export class AuthService {
 
   static async resendOtp(request: any) {
     const user = await prisma.user.findUnique({
-      where: { email: request.email.toLowerCase() },
+      where: { email: request.email.toLowerCase().trim() },
     });
 
     if (!user) {

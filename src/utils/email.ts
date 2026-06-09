@@ -31,10 +31,13 @@ async function sendMail(to: string, subject: string, html: string) {
       html,
     });
     console.log(`[Email Service] Resend API Response:`, response);
-    return { success: true, data: response };
+    if (response.error) {
+      throw new Error(response.error.message || JSON.stringify(response.error));
+    }
+    return { success: true, data: response.data };
   } catch (error) {
     console.error(`[Email Service] Failed to send email via Resend API:`, error);
-    return { success: false, error };
+    throw error;
   }
 }
 
