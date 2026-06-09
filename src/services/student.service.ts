@@ -140,11 +140,6 @@ export class StudentService {
 
     const rawPassword = request.password && request.password.trim() ? request.password.trim() : "Student@123!";
     const hashedPassword = await hashPassword(rawPassword);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-
-    const hasParentEmail = !!request.parentEmail && request.parentEmail.trim() !== "";
-
     const user = await prisma.user.create({
       data: {
         schoolId,
@@ -153,9 +148,7 @@ export class StudentService {
         passwordHash: hashedPassword,
         role: "Student",
         isActive: true,
-        isVerified: !hasParentEmail,
-        verificationOtp: hasParentEmail ? otp : null,
-        verificationOtpExpiry: hasParentEmail ? otpExpiry : null,
+        isVerified: true,
       },
     });
 
@@ -195,12 +188,6 @@ export class StudentService {
         admNo,
         rawPassword
       ).catch((err) => console.error("[StudentService] Onboarding email error:", err));
-
-      emailService.sendVerificationOtpEmail(
-        student.parentEmail,
-        student.parentName,
-        otp
-      ).catch((err) => console.error("[StudentService] Verification OTP email error:", err));
     }
 
     return successResponse(this.mapToResponse(student), "Student created successfully.");

@@ -51,8 +51,6 @@ export class AuthService {
     }
 
     const hashedPassword = await hashPassword(request.password);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const user = await prisma.user.create({
       data: {
@@ -61,9 +59,7 @@ export class AuthService {
         passwordHash: hashedPassword,
         role: "SuperAdmin",
         isActive: true,
-        isVerified: false,
-        verificationOtp: otp,
-        verificationOtpExpiry: otpExpiry,
+        isVerified: true,
       },
     });
 
@@ -78,9 +74,9 @@ export class AuthService {
       },
     });
 
-    // Send OTP verification email asynchronously
-    emailService.sendVerificationOtpEmail(user.email, user.name, otp)
-      .catch((err) => console.error("[AuthService] Super admin verification email error:", err));
+    // Send welcome email immediately
+    emailService.sendSuperAdminWelcomeEmail(user.email, user.name)
+      .catch((err) => console.error("[AuthService] Super admin welcome email error:", err));
 
     return successResponse(responseData, "Super Admin created successfully.");
   }
@@ -122,8 +118,6 @@ export class AuthService {
     });
 
     const hashedPassword = await hashPassword(request.password);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const user = await prisma.user.create({
       data: {
@@ -134,9 +128,7 @@ export class AuthService {
         role: "SchoolAdmin",
         isActive: true,
         adminRole: request.adminRole || null,
-        isVerified: false,
-        verificationOtp: otp,
-        verificationOtpExpiry: otpExpiry,
+        isVerified: true,
       },
     });
 
@@ -150,9 +142,14 @@ export class AuthService {
       },
     });
 
-    // Send verification email asynchronously
-    emailService.sendVerificationOtpEmail(user.email, user.name, otp)
-      .catch((err) => console.error("[AuthService] School admin verification email error:", err));
+    // Send welcome email immediately
+    emailService.sendSchoolWelcomeEmail(
+      user.email,
+      user.name,
+      school.name,
+      school.slug,
+      school.subscriptionPlan
+    ).catch((err) => console.error("[AuthService] School welcome email error:", err));
 
     return successResponse(responseData, "School registered successfully.");
   }

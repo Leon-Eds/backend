@@ -120,7 +120,7 @@ model User {
   adminRole              String?            @db.VarChar(100)
   passwordResetToken     String?
   passwordResetExpiry    DateTime?
-  isVerified             Boolean            @default(false)
+  isVerified             Boolean            @default(true)
   verificationOtp        String?            @db.VarChar(10)
   verificationOtpExpiry  DateTime?
   createdAt              DateTime           @default(now())

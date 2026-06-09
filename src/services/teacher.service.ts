@@ -127,8 +127,6 @@ export class TeacherService {
     }
 
     const hashedPassword = await hashPassword(request.password);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const user = await prisma.user.create({
       data: {
@@ -138,9 +136,7 @@ export class TeacherService {
         passwordHash: hashedPassword,
         role: "Teacher",
         isActive: true,
-        isVerified: false,
-        verificationOtp: otp,
-        verificationOtpExpiry: otpExpiry,
+        isVerified: true,
       },
     });
 
@@ -171,13 +167,6 @@ export class TeacherService {
       teacher.email,
       request.password
     ).catch((err) => console.error("[TeacherService] Onboarding email error:", err));
-
-    // Send verification OTP email asynchronously
-    emailService.sendVerificationOtpEmail(
-      teacher.email,
-      teacher.fullName,
-      otp
-    ).catch((err) => console.error("[TeacherService] Verification OTP email error:", err));
 
     return successResponse(this.mapToResponse(teacher), "Teacher created successfully.");
   }
