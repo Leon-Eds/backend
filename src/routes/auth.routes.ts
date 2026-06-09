@@ -10,6 +10,8 @@ import {
   changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
 } from "../validations/auth.validation";
 
 const router = Router();
@@ -247,5 +249,60 @@ router.post("/forgot-password", validateBody(forgotPasswordSchema), AuthControll
  *         description: Invalid or expired token
  */
 router.post("/reset-password", validateBody(resetPasswordSchema), AuthController.resetPassword);
+
+/**
+ * @swagger
+ * /api/auth/verify-otp:
+ *   post:
+ *     summary: Verify email address using the received OTP
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               otp:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully, returns JWT token and details
+ *       400:
+ *         description: Invalid or expired OTP
+ */
+router.post("/verify-otp", validateBody(verifyOtpSchema), AuthController.verifyOtp);
+
+/**
+ * @swagger
+ * /api/auth/resend-otp:
+ *   post:
+ *     summary: Request a new email verification OTP code
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: A new verification OTP has been sent
+ *       400:
+ *         description: User not found or already verified
+ */
+router.post("/resend-otp", validateBody(resendOtpSchema), AuthController.resendOtp);
 
 export default router;

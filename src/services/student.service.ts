@@ -1,6 +1,8 @@
 import { prisma } from "../config/db";
 import { hashPassword } from "../utils/bcrypt";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
+import crypto from "crypto";
+import { emailService } from "../utils/email";
 
 export class StudentService {
   private static getPlanLimits(plan: "Free" | "Plus" | "Premium") {
@@ -124,25 +126,36 @@ export class StudentService {
       }
     }
 
-    let systemEmail = `${admNo.replace(/\//g, "").toLowerCase()}@${school.slug}.leoned.com`;
-    const emailExists = await prisma.user.findUnique({
-      where: { email: systemEmail },
+    const loginEmail = request.parentEmail && request.parentEmail.trim()
+      ? request.parentEmail.toLowerCase().trim()
+      : `${admNo.replace(/\//g, "").toLowerCase()}@${school.slug}.leoned.com`;
+
+    const emailExists = await prisma.user.findFirst({
+      where: { email: loginEmail },
     });
 
     if (emailExists) {
-      systemEmail = `${admNo.replace(/\//g, "").toLowerCase()}${crypto.randomUUID().slice(0, 4)}@${school.slug}.leoned.com`;
+      return failResponse("Parent email is already associated with another account.");
     }
 
-    const hashedPassword = await hashPassword("Student@123!");
+    const rawPassword = request.password && request.password.trim() ? request.password.trim() : "Student@123!";
+    const hashedPassword = await hashPassword(rawPassword);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    const hasParentEmail = !!request.parentEmail && request.parentEmail.trim() !== "";
 
     const user = await prisma.user.create({
       data: {
         schoolId,
         name: request.fullName,
-        email: systemEmail,
+        email: loginEmail,
         passwordHash: hashedPassword,
         role: "Student",
         isActive: true,
+        isVerified: !hasParentEmail,
+        verificationOtp: hasParentEmail ? otp : null,
+        verificationOtpExpiry: hasParentEmail ? otpExpiry : null,
       },
     });
 
@@ -170,6 +183,25 @@ export class StudentService {
         user: true,
       },
     });
+
+    // Send student/parent onboarding email asynchronously
+    if (student.parentEmail && student.parentEmail.trim() !== "") {
+      emailService.sendStudentWelcomeEmail(
+        student.parentEmail,
+        student.parentName,
+        student.fullName,
+        school.name,
+        loginEmail,
+        admNo,
+        rawPassword
+      ).catch((err) => console.error("[StudentService] Onboarding email error:", err));
+
+      emailService.sendVerificationOtpEmail(
+        student.parentEmail,
+        student.parentName,
+        otp
+      ).catch((err) => console.error("[StudentService] Verification OTP email error:", err));
+    }
 
     return successResponse(this.mapToResponse(student), "Student created successfully.");
   }

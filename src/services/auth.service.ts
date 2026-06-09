@@ -4,6 +4,7 @@ import { generateJwtToken, generateRefreshToken, getTokenExpiryDate } from "../u
 import { generateSlug } from "../utils/slug";
 import { successResponse, failResponse } from "../utils/response";
 import crypto from "crypto";
+import { emailService } from "../utils/email";
 
 export class AuthService {
   private static generateAuthResponseData(user: any, schoolName?: string | null) {
@@ -22,6 +23,7 @@ export class AuthService {
         role: user.role,
         schoolId: user.schoolId,
         schoolName: schoolName || null,
+        isVerified: user.isVerified || false,
       },
     };
   }
@@ -49,6 +51,8 @@ export class AuthService {
     }
 
     const hashedPassword = await hashPassword(request.password);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const user = await prisma.user.create({
       data: {
@@ -57,6 +61,9 @@ export class AuthService {
         passwordHash: hashedPassword,
         role: "SuperAdmin",
         isActive: true,
+        isVerified: false,
+        verificationOtp: otp,
+        verificationOtpExpiry: otpExpiry,
       },
     });
 
@@ -70,6 +77,10 @@ export class AuthService {
         refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
     });
+
+    // Send OTP verification email asynchronously
+    emailService.sendVerificationOtpEmail(user.email, user.name, otp)
+      .catch((err) => console.error("[AuthService] Super admin verification email error:", err));
 
     return successResponse(responseData, "Super Admin created successfully.");
   }
@@ -111,6 +122,8 @@ export class AuthService {
     });
 
     const hashedPassword = await hashPassword(request.password);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const user = await prisma.user.create({
       data: {
@@ -121,6 +134,9 @@ export class AuthService {
         role: "SchoolAdmin",
         isActive: true,
         adminRole: request.adminRole || null,
+        isVerified: false,
+        verificationOtp: otp,
+        verificationOtpExpiry: otpExpiry,
       },
     });
 
@@ -133,6 +149,10 @@ export class AuthService {
         refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
     });
+
+    // Send verification email asynchronously
+    emailService.sendVerificationOtpEmail(user.email, user.name, otp)
+      .catch((err) => console.error("[AuthService] School admin verification email error:", err));
 
     return successResponse(responseData, "School registered successfully.");
   }
@@ -242,6 +262,10 @@ export class AuthService {
       },
     });
 
+    // Send reset password email asynchronously
+    emailService.sendPasswordResetEmail(user.email, user.name, resetToken)
+      .catch((err) => console.error("[AuthService] Password reset email error:", err));
+
     // In production, send email with reset link containing the token.
     // For now, return the token directly for development/testing.
     return successResponse(
@@ -275,5 +299,93 @@ export class AuthService {
     });
 
     return successResponse(true, "Password reset successfully. You can now log in with your new password.");
+  }
+
+  static async verifyOtp(request: any) {
+    const user = await prisma.user.findUnique({
+      where: { email: request.email.toLowerCase() },
+      include: { school: true },
+    });
+
+    if (!user) {
+      return failResponse("User not found.");
+    }
+
+    if (user.isVerified) {
+      return failResponse("Email is already verified.");
+    }
+
+    if (!user.verificationOtp || user.verificationOtp !== request.otp) {
+      return failResponse("Invalid verification OTP.");
+    }
+
+    if (!user.verificationOtpExpiry || user.verificationOtpExpiry < new Date()) {
+      return failResponse("Verification OTP has expired. Please request a new one.");
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        verificationOtp: null,
+        verificationOtpExpiry: null,
+      },
+    });
+
+    // Send corresponding welcome email upon verification
+    if (updatedUser.role === "SchoolAdmin" && user.school) {
+      emailService.sendSchoolWelcomeEmail(
+        updatedUser.email,
+        updatedUser.name,
+        user.school.name,
+        user.school.slug,
+        user.school.subscriptionPlan
+      ).catch((err) => console.error("[AuthService] Welcome email error:", err));
+    } else if (updatedUser.role === "SuperAdmin") {
+      emailService.sendSuperAdminWelcomeEmail(updatedUser.email, updatedUser.name)
+        .catch((err) => console.error("[AuthService] Super admin welcome email error:", err));
+    }
+
+    const responseData = this.generateAuthResponseData(updatedUser, user.school?.name);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshToken: responseData.refreshToken,
+        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
+    });
+
+    return successResponse(responseData, "Email verified successfully.");
+  }
+
+  static async resendOtp(request: any) {
+    const user = await prisma.user.findUnique({
+      where: { email: request.email.toLowerCase() },
+    });
+
+    if (!user) {
+      return failResponse("User not found.");
+    }
+
+    if (user.isVerified) {
+      return failResponse("Email is already verified.");
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationOtp: otp,
+        verificationOtpExpiry: otpExpiry,
+      },
+    });
+
+    emailService.sendVerificationOtpEmail(user.email, user.name, otp)
+      .catch((err) => console.error("[AuthService] Resend OTP email error:", err));
+
+    return successResponse(true, "A new verification OTP has been sent to your email.");
   }
 }

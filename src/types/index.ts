@@ -6,6 +6,7 @@ export interface UserPayload {
   name: string;
   role: "SuperAdmin" | "SchoolAdmin" | "Teacher" | "Student";
   schoolId?: string;
+  isVerified: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {

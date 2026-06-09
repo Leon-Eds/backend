@@ -87,4 +87,28 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async verifyOtp(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await AuthService.verifyOtp(req.body);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async resendOtp(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await AuthService.resendOtp(req.body);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

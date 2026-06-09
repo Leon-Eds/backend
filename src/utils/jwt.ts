@@ -7,7 +7,7 @@ export interface TokenResponse {
   tokenExpiry: Date;
 }
 
-export function generateJwtToken(user: { id: string; email: string; name: string; role: string; schoolId?: string | null }): string {
+export function generateJwtToken(user: { id: string; email: string; name: string; role: string; schoolId?: string | null; isVerified?: boolean }): string {
   const secret = process.env.JWT_KEY || "SuperSecretDefaultKeyForLeonEdBackendNodeJSNodeJSNodeJSNodeJSNodeJSNodeJS";
   const expiryMinutes = parseInt(process.env.JWT_EXPIRY_MINUTES || "60", 10);
 
@@ -18,6 +18,7 @@ export function generateJwtToken(user: { id: string; email: string; name: string
     unique_name: user.name,
     role: user.role,
     SchoolId: user.schoolId || undefined,
+    isVerified: user.isVerified || false,
   };
 
   return jwt.sign(payload, secret, {

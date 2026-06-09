@@ -1,5 +1,6 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
+import { emailService } from "../utils/email";
 
 export class AcademicSessionService {
   private static mapToResponse(s: any) {
@@ -55,6 +56,21 @@ export class AcademicSessionService {
         terms: true,
       },
     });
+
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { name: true, contactEmail: true },
+    });
+
+    if (school && school.contactEmail) {
+      emailService.sendSessionCreatedNotification(
+        school.contactEmail,
+        school.name,
+        session.name,
+        session.startDate,
+        session.endDate
+      ).catch((err) => console.error("[AcademicSessionService] Session creation notification email error:", err));
+    }
 
     return successResponse(this.mapToResponse(session), "Academic session created successfully.");
   }

@@ -9,6 +9,7 @@ export const createStudentSchema = z.object({
   parentName: z.string().max(200).optional().default(""),
   parentPhone: z.string().max(30).optional().default(""),
   parentEmail: z.string().max(200).optional().default(""),
+  password: z.string().min(6, "Password must be at least 6 characters long").optional().nullable(),
   arm: z.string().max(50).optional().nullable(),
   bloodGroup: z.string().max(20).optional().nullable(),
 });

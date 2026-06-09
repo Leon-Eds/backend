@@ -45,3 +45,12 @@ export const resetPasswordSchema = z.object({
   token: z.string().min(1, "Reset token is required"),
   newPassword: z.string().min(6, "New password must be at least 6 characters long"),
 });
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  otp: z.string().min(4, "OTP must be at least 4 characters").max(10, "OTP cannot exceed 10 characters"),
+});
+
+export const resendOtpSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});

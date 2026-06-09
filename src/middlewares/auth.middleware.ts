@@ -26,6 +26,7 @@ export function authMiddleware(allowedRoles?: string[]) {
         name: decoded.unique_name || decoded.name,
         role: decoded.role,
         schoolId: decoded.SchoolId || decoded.schoolId,
+        isVerified: decoded.isVerified ?? false,
       };
 
       req.user = userPayload;
@@ -33,6 +34,15 @@ export function authMiddleware(allowedRoles?: string[]) {
       // Extract school context if present
       if (userPayload.schoolId) {
         req.schoolId = userPayload.schoolId;
+      }
+
+      // Check if user has verified email
+      if (!userPayload.isVerified) {
+        return res.status(403).json({
+          success: false,
+          message: "Email verification is required. Please verify your email using the OTP sent.",
+          requiresVerification: true,
+        });
       }
 
       // Check roles if specified

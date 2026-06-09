@@ -1,5 +1,6 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
+import { emailService } from "../utils/email";
 
 export class ClassService {
   private static mapToResponse(c: any) {
@@ -78,6 +79,20 @@ export class ClassService {
         academicSession: true,
       },
     });
+
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { name: true, contactEmail: true },
+    });
+
+    if (school && school.contactEmail) {
+      emailService.sendClassCreatedNotification(
+        school.contactEmail,
+        school.name,
+        classEntity.name,
+        classEntity.arm
+      ).catch((err) => console.error("[ClassService] Class creation notification email error:", err));
+    }
 
     return successResponse(this.mapToResponse(classEntity), "Class created successfully.");
   }
