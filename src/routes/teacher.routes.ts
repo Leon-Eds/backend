@@ -102,6 +102,9 @@ router.get("/:id", TeacherController.getById);
  *                 type: string
  *               password:
  *                 type: string
+ *               profilePictureUrl:
+ *                 type: string
+ *                 description: URL of the teacher's profile picture
  *     responses:
  *       201:
  *         description: Teacher created successfully
@@ -140,6 +143,9 @@ router.post("/", validateBody(createTeacherSchema), TeacherController.create);
  *                 type: string
  *               phone:
  *                 type: string
+ *               profilePictureUrl:
+ *                 type: string
+ *                 description: URL of the teacher's profile picture
  *     responses:
  *       200:
  *         description: Teacher updated successfully

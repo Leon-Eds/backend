@@ -15,9 +15,10 @@ export class ScoreController {
     try {
       const schoolId = req.schoolId!;
       const userId = req.user?.id!;
+      const userRole = req.user?.role;
       const teacherId = await ScoreController.getTeacherId(userId);
 
-      const result = await ScoreService.enterScore(schoolId, teacherId, req.body);
+      const result = await ScoreService.enterScore(schoolId, teacherId, req.body, userRole, userId);
       if (result.success) {
         return res.status(200).json(result);
       }
@@ -31,9 +32,10 @@ export class ScoreController {
     try {
       const schoolId = req.schoolId!;
       const userId = req.user?.id!;
+      const userRole = req.user?.role;
       const teacherId = await ScoreController.getTeacherId(userId);
 
-      const result = await ScoreService.bulkEnterScores(schoolId, teacherId, req.body);
+      const result = await ScoreService.bulkEnterScores(schoolId, teacherId, req.body, userRole, userId);
       if (result.success) {
         return res.status(200).json(result);
       }

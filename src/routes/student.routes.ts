@@ -140,6 +140,9 @@ router.get("/:id", StudentController.getById);
  *               password:
  *                 type: string
  *                 description: Optional login password for the student account (defaults to Student@123! if not provided)
+ *               profilePictureUrl:
+ *                 type: string
+ *                 description: URL of the student's profile picture
  *     responses:
  *       201:
  *         description: Student created successfully
@@ -194,6 +197,9 @@ router.post("/", validateBody(createStudentSchema), StudentController.create);
  *               status:
  *                 type: string
  *                 enum: [Active, Graduated, Archived, Suspended]
+ *               profilePictureUrl:
+ *                 type: string
+ *                 description: URL of the student's profile picture
  *     responses:
  *       200:
  *         description: Student updated successfully

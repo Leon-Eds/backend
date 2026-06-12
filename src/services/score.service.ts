@@ -1,5 +1,6 @@
 import { prisma } from "../config/db";
 import { GradingService } from "./grading.service";
+import { TeacherPortalService } from "./teacher-portal.service";
 import { successResponse, failResponse } from "../utils/response";
 
 export class ScoreService {
@@ -20,7 +21,27 @@ export class ScoreService {
     };
   }
 
-  static async enterScore(schoolId: string, teacherId: string | null, request: any) {
+  static async enterScore(
+    schoolId: string,
+    teacherId: string | null,
+    request: any,
+    userRole?: string,
+    userId?: string
+  ) {
+    // If the caller is a Teacher, enforce assignment-based access control
+    if (userRole === "Teacher" && userId) {
+      const check = await TeacherPortalService.verifyAssignment(
+        schoolId,
+        userId,
+        request.classId,
+        request.subjectId
+      );
+      if (!check.allowed) {
+        return failResponse(check.message || "You are not assigned to teach this subject in this class.");
+      }
+      teacherId = check.teacherId;
+    }
+
     const student = await prisma.student.findFirst({
       where: { id: request.studentId, schoolId },
     });
@@ -90,7 +111,27 @@ export class ScoreService {
     );
   }
 
-  static async bulkEnterScores(schoolId: string, teacherId: string | null, request: any) {
+  static async bulkEnterScores(
+    schoolId: string,
+    teacherId: string | null,
+    request: any,
+    userRole?: string,
+    userId?: string
+  ) {
+    // If the caller is a Teacher, enforce assignment-based access control
+    if (userRole === "Teacher" && userId) {
+      const check = await TeacherPortalService.verifyAssignment(
+        schoolId,
+        userId,
+        request.classId,
+        request.subjectId
+      );
+      if (!check.allowed) {
+        return failResponse(check.message || "You are not assigned to teach this subject in this class.");
+      }
+      teacherId = check.teacherId;
+    }
+
     const subject = await prisma.subject.findFirst({
       where: { id: request.subjectId, schoolId },
     });

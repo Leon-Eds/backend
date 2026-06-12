@@ -11,6 +11,8 @@ export class ClassService {
       studentCount: c.students ? c.students.length : 0,
       academicSessionId: c.academicSessionId,
       academicSessionName: c.academicSession?.name || null,
+      formTeacherId: c.formTeacherId || null,
+      formTeacherName: c.formTeacher?.fullName || null,
       subjects: c.classSubjects
         ? c.classSubjects.map((cs: any) => ({
             subjectId: cs.subjectId,
@@ -32,6 +34,7 @@ export class ClassService {
           },
         },
         academicSession: true,
+        formTeacher: true,
       },
       orderBy: { name: "asc" },
     });
@@ -51,6 +54,7 @@ export class ClassService {
           },
         },
         academicSession: true,
+        formTeacher: true,
       },
     });
 
@@ -68,6 +72,7 @@ export class ClassService {
         name: request.name,
         arm: request.arm || "",
         academicSessionId: request.academicSessionId || null,
+        formTeacherId: request.formTeacherId || null,
       },
       include: {
         students: true,
@@ -77,6 +82,7 @@ export class ClassService {
           },
         },
         academicSession: true,
+        formTeacher: true,
       },
     });
 
@@ -111,6 +117,7 @@ export class ClassService {
       data: {
         name: request.name !== undefined ? request.name : undefined,
         arm: request.arm !== undefined ? request.arm : undefined,
+        formTeacherId: request.formTeacherId !== undefined ? request.formTeacherId : undefined,
       },
       include: {
         students: true,
@@ -120,6 +127,7 @@ export class ClassService {
           },
         },
         academicSession: true,
+        formTeacher: true,
       },
     });
 
@@ -193,6 +201,7 @@ export class ClassService {
           },
         },
         academicSession: true,
+        formTeacher: true,
       },
     });
 

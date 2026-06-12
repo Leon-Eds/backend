@@ -23,6 +23,7 @@ export class TeacherService {
       fullName: t.fullName,
       email: t.email,
       phone: t.phone,
+      profilePictureUrl: t.profilePictureUrl || "",
       isActive: t.isActive,
       createdAt: t.createdAt,
       assignments: t.subjectAssignments
@@ -147,6 +148,7 @@ export class TeacherService {
         fullName: request.fullName,
         email: request.email.toLowerCase(),
         phone: request.phone || "",
+        profilePictureUrl: request.profilePictureUrl || "",
         isActive: true,
       },
       include: {
@@ -193,6 +195,7 @@ export class TeacherService {
       data: {
         fullName: request.fullName !== undefined ? request.fullName : undefined,
         phone: request.phone !== undefined ? request.phone : undefined,
+        profilePictureUrl: request.profilePictureUrl !== undefined ? request.profilePictureUrl : undefined,
       },
       include: {
         subjectAssignments: {

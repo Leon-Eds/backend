@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { emailService } from "../utils/email";
 
 export class AuthService {
-  private static generateAuthResponseData(user: any, schoolName?: string | null) {
+  private static generateAuthResponseData(user: any, schoolName?: string | null, schoolLogoUrl?: string | null) {
     const token = generateJwtToken(user);
     const refreshToken = generateRefreshToken();
     const tokenExpiry = getTokenExpiryDate();
@@ -23,6 +23,8 @@ export class AuthService {
         role: user.role,
         schoolId: user.schoolId,
         schoolName: schoolName || null,
+        profilePictureUrl: user.profilePictureUrl || "",
+        schoolLogoUrl: schoolLogoUrl || "",
         isVerified: user.isVerified || false,
       },
     };
@@ -132,7 +134,7 @@ export class AuthService {
       },
     });
 
-    const responseData = this.generateAuthResponseData(user, school.name);
+    const responseData = this.generateAuthResponseData(user, school.name, school.logoUrl);
 
     await prisma.user.update({
       where: { id: user.id },
@@ -179,7 +181,7 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
 
-    const responseData = this.generateAuthResponseData(user, user.school?.name);
+    const responseData = this.generateAuthResponseData(user, user.school?.name, user.school?.logoUrl);
 
     await prisma.user.update({
       where: { id: user.id },
@@ -202,7 +204,7 @@ export class AuthService {
       return failResponse("Invalid or expired refresh token.");
     }
 
-    const responseData = this.generateAuthResponseData(user, user.school?.name);
+    const responseData = this.generateAuthResponseData(user, user.school?.name, user.school?.logoUrl);
 
     await prisma.user.update({
       where: { id: user.id },
@@ -343,7 +345,7 @@ export class AuthService {
         .catch((err) => console.error("[AuthService] Super admin welcome email error:", err));
     }
 
-    const responseData = this.generateAuthResponseData(updatedUser, user.school?.name);
+    const responseData = this.generateAuthResponseData(updatedUser, user.school?.name, user.school?.logoUrl);
 
     await prisma.user.update({
       where: { id: user.id },

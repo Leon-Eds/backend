@@ -104,6 +104,7 @@ model School {
   results          Result[]
   feePayments      FeePayment[]
   announcements    Announcement[]
+  attendances      Attendance[]
 }
 
 model User {
@@ -113,6 +114,7 @@ model User {
   email              String             @unique @db.VarChar(200)
   passwordHash       String
   role               UserRole
+  profilePictureUrl  String             @default("") @db.VarChar(500)
   isActive           Boolean            @default(true)
   refreshToken       String?
   refreshTokenExpiry DateTime?
@@ -133,21 +135,22 @@ model User {
 }
 
 model Student {
-  id              String        @id @default(uuid()) @db.Uuid
-  schoolId        String        @db.Uuid
-  classId         String?       @db.Uuid
-  userId          String?       @db.Uuid
-  fullName        String        @db.VarChar(200)
-  admissionNumber String        @db.VarChar(50)
-  gender          Gender
-  dateOfBirth     DateTime?     @db.Date
-  parentName      String        @default("") @db.VarChar(200)
-  parentPhone     String        @default("") @db.VarChar(30)
-  parentEmail     String        @default("") @db.VarChar(150)
-  status          StudentStatus @default(Active)
-  arm             String?       @db.VarChar(50)
-  bloodGroup      String?       @db.VarChar(20)
-  enrolledAt      DateTime      @default(now())
+  id                String        @id @default(uuid()) @db.Uuid
+  schoolId          String        @db.Uuid
+  classId           String?       @db.Uuid
+  userId            String?       @db.Uuid
+  fullName          String        @db.VarChar(200)
+  admissionNumber   String        @db.VarChar(50)
+  gender            Gender
+  dateOfBirth       DateTime?     @db.Date
+  profilePictureUrl String        @default("") @db.VarChar(500)
+  parentName        String        @default("") @db.VarChar(200)
+  parentPhone       String        @default("") @db.VarChar(30)
+  parentEmail       String        @default("") @db.VarChar(150)
+  status            StudentStatus @default(Active)
+  arm               String?       @db.VarChar(50)
+  bloodGroup        String?       @db.VarChar(20)
+  enrolledAt        DateTime      @default(now())
 
   school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class           Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
@@ -155,26 +158,30 @@ model Student {
   scores          Score[]
   results         Result[]
   feePayments     FeePayment[]
+  attendances     Attendance[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
 }
 
 model Teacher {
-  id         String   @id @default(uuid()) @db.Uuid
-  schoolId   String   @db.Uuid
-  userId     String   @db.Uuid
-  fullName   String   @db.VarChar(200)
-  email      String   @default("") @db.VarChar(200)
-  phone      String   @default("") @db.VarChar(30)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime? @updatedAt
+  id                String    @id @default(uuid()) @db.Uuid
+  schoolId          String    @db.Uuid
+  userId            String    @db.Uuid
+  fullName          String    @db.VarChar(200)
+  email             String    @default("") @db.VarChar(200)
+  phone             String    @default("") @db.VarChar(30)
+  profilePictureUrl String    @default("") @db.VarChar(500)
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime? @updatedAt
 
   school             School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user               User                      @relation("UserToTeacher", fields: [userId], references: [id], onDelete: Cascade)
   subjectAssignments TeacherSubjectAssignment[]
   enteredScores      Score[]
+  formClasses        Class[]                   @relation("ClassFormTeacher")
+  takenAttendances   Attendance[]
 
   @@index([schoolId])
 }
@@ -183,6 +190,7 @@ model Class {
   id                String    @id @default(uuid()) @db.Uuid
   schoolId          String    @db.Uuid
   academicSessionId String?   @db.Uuid
+  formTeacherId     String?   @db.Uuid
   name              String    @db.VarChar(100)
   arm               String    @default("") @db.VarChar(50)
   level             Int       @default(1)
@@ -190,11 +198,13 @@ model Class {
 
   school             School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   academicSession    AcademicSession?          @relation(fields: [academicSessionId], references: [id], onDelete: SetNull)
+  formTeacher        Teacher?                  @relation("ClassFormTeacher", fields: [formTeacherId], references: [id], onDelete: SetNull)
   students           Student[]
   teacherAssignments TeacherSubjectAssignment[]
   classSubjects      ClassSubject[]
   scores             Score[]
   results            Result[]
+  attendances        Attendance[]
 
   @@index([schoolId])
 }
@@ -388,3 +398,31 @@ model Announcement {
 
   @@index([schoolId])
 }
+
+enum AttendanceStatus {
+  Present
+  Absent
+  Late
+}
+
+model Attendance {
+  id                String           @id @default(uuid()) @db.Uuid
+  schoolId          String           @db.Uuid
+  classId           String           @db.Uuid
+  studentId         String           @db.Uuid
+  date              DateTime         @db.Date
+  status            AttendanceStatus
+  remarks           String           @default("") @db.VarChar(200)
+  takenByTeacherId  String?          @db.Uuid
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime?        @updatedAt
+
+  school            School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class             Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student           Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  takenByTeacher    Teacher?         @relation(fields: [takenByTeacherId], references: [id], onDelete: SetNull)
+
+  @@unique([schoolId, studentId, date])
+  @@index([schoolId, classId, date])
+}
+

@@ -146,7 +146,14 @@ export class DashboardService {
         subjectAssignments: {
           include: {
             subject: true,
-            class: true,
+            class: {
+              include: {
+                students: {
+                  where: { status: "Active" },
+                  select: { id: true },
+                },
+              },
+            },
           },
         },
       },
@@ -172,16 +179,28 @@ export class DashboardService {
       subjectName: a.subject ? a.subject.name : "",
       classId: a.classId,
       className: a.class ? `${a.class.name} ${a.class.arm}`.trim() : "",
+      studentCount: a.class?.students?.length || 0,
     }));
 
     const distinctSubjectIds = new Set(assignments.map((a) => a.subjectId));
     const distinctClassIds = new Set(assignments.map((a) => a.classId));
 
+    // Total unique students across all assigned classes
+    const totalStudents = await prisma.student.count({
+      where: {
+        schoolId,
+        status: "Active",
+        classId: { in: Array.from(distinctClassIds) },
+      },
+    });
+
     return successResponse({
       teacherId: teacher.id,
       fullName: teacher.fullName,
+      profilePictureUrl: teacher.profilePictureUrl || "",
       totalAssignedSubjects: distinctSubjectIds.size,
       totalAssignedClasses: distinctClassIds.size,
+      totalStudents,
       currentSession: currentSession?.name || null,
       currentTerm: currentTerm?.termNumber || null,
       assignments,

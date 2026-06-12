@@ -23,6 +23,8 @@ import feeRoutes from "./routes/fee.routes";
 import reportCardRoutes from "./routes/report-card.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import announcementRoutes from "./routes/announcement.routes";
+import teacherPortalRoutes from "./routes/teacher-portal.routes";
+import attendanceRoutes from "./routes/attendance.routes";
 
 dotenv.config();
 
@@ -142,6 +144,8 @@ app.use("/api/fee", feeRoutes);
 app.use("/api/reportcard", reportCardRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/announcement", announcementRoutes);
+app.use("/api/teacher-portal", teacherPortalRoutes);
+app.use("/api/attendance", attendanceRoutes);
 
 // Error Handling Middleware (Must be registered last)
 app.use(errorMiddleware);
