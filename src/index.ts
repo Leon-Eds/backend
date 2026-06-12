@@ -61,8 +61,8 @@ const swaggerOptions = {
     ],
   },
   apis: [
-    path.join(__dirname, "routes", "*.ts"),
-    path.join(__dirname, "routes", "*.js"),
+    path.join(__dirname, "routes", "*.ts").replace(/\\/g, "/"),
+    path.join(__dirname, "routes", "*.js").replace(/\\/g, "/"),
   ],
 };
 
