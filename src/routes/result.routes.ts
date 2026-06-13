@@ -20,7 +20,7 @@ router.use(requireSchoolId);
  * @swagger
  * /api/result/compute/{classId}/{termId}:
  *   post:
- *     summary: Compute results for a class in a given term (SchoolAdmin only)
+ *     summary: Compute results for a class in a given term (SchoolAdmin/Teacher - assigned Form Teacher if Teacher)
  *     tags: [Results]
  *     security:
  *       - bearerAuth: []
@@ -47,13 +47,13 @@ router.use(requireSchoolId);
  *       200:
  *         description: Results computed successfully
  */
-router.post("/compute/:classId/:termId", authMiddleware(["SchoolAdmin"]), ResultController.computeClassResults);
+router.post("/compute/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), ResultController.computeClassResults);
 
 /**
  * @swagger
  * /api/result/submit/{classId}/{termId}:
  *   post:
- *     summary: Submit class results for approval (SchoolAdmin/Teacher)
+ *     summary: Submit class results for approval with individual remarks (SchoolAdmin/Teacher - assigned Form Teacher if Teacher)
  *     tags: [Results]
  *     security:
  *       - bearerAuth: []
@@ -83,8 +83,18 @@ router.post("/compute/:classId/:termId", authMiddleware(["SchoolAdmin"]), Result
  *           schema:
  *             type: object
  *             properties:
- *               teacherComment:
- *                 type: string
+ *               remarks:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - studentId
+ *                   properties:
+ *                     studentId:
+ *                       type: string
+ *                       format: uuid
+ *                     comment:
+ *                       type: string
  *     responses:
  *       200:
  *         description: Results submitted successfully

@@ -7,8 +7,10 @@ export class ResultController {
     try {
       const schoolId = req.schoolId!;
       const { classId, termId } = req.params;
+      const userId = req.user?.id!;
+      const userRole = req.user?.role!;
 
-      const result = await ResultService.computeClassResults(schoolId, classId, termId);
+      const result = await ResultService.computeClassResults(schoolId, classId, termId, userId, userRole);
       if (result.success) {
         return res.status(200).json(result);
       }
@@ -22,8 +24,10 @@ export class ResultController {
     try {
       const schoolId = req.schoolId!;
       const { classId, termId } = req.params;
+      const userId = req.user?.id!;
+      const userRole = req.user?.role!;
 
-      const result = await ResultService.submitResults(schoolId, classId, termId, req.body);
+      const result = await ResultService.submitResults(schoolId, classId, termId, userId, userRole, req.body);
       if (result.success) {
         return res.status(200).json(result);
       }

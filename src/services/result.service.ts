@@ -3,13 +3,76 @@ import { successResponse, failResponse } from "../utils/response";
 import { FeeService } from "./fee.service";
 
 export class ResultService {
-  static async computeClassResults(schoolId: string, classId: string, termId: string) {
+
+  private static async resolveTeacher(schoolId: string, userId: string) {
+    return prisma.teacher.findFirst({
+      where: { userId, schoolId },
+    });
+  }
+
+  /**
+   * Helper to verify if all subjects assigned to a class have scores recorded for active students
+   */
+  static async checkAllSubjectsEntered(schoolId: string, classId: string, termId: string) {
+    const assignedSubjects = await prisma.classSubject.findMany({
+      where: { classId },
+      include: { subject: true },
+    });
+
+    const activeStudents = await prisma.student.findMany({
+      where: { schoolId, classId, status: "Active" },
+    });
+
+    if (assignedSubjects.length === 0 || activeStudents.length === 0) {
+      return { allEntered: true, missingSubjects: [] };
+    }
+
+    const missingSubjects: string[] = [];
+
+    for (const cs of assignedSubjects) {
+      const scoreCount = await prisma.score.count({
+        where: {
+          schoolId,
+          classId,
+          termId,
+          subjectId: cs.subjectId,
+          studentId: { in: activeStudents.map((s) => s.id) },
+        },
+      });
+
+      // If any active student is missing a score for this subject
+      if (scoreCount < activeStudents.length) {
+        missingSubjects.push(cs.subject.name);
+      }
+    }
+
+    return {
+      allEntered: missingSubjects.length === 0,
+      missingSubjects,
+    };
+  }
+
+  static async computeClassResults(
+    schoolId: string,
+    classId: string,
+    termId: string,
+    userId?: string,
+    userRole?: string
+  ) {
     const classEntity = await prisma.class.findFirst({
       where: { id: classId, schoolId },
     });
 
     if (!classEntity) {
       return failResponse("Class not found.");
+    }
+
+    // Role check: Only SchoolAdmin or the class's Form Teacher can compute class results
+    if (userRole === "Teacher" && userId) {
+      const teacher = await this.resolveTeacher(schoolId, userId);
+      if (!teacher || classEntity.formTeacherId !== teacher.id) {
+        return failResponse("Access Denied: Only the assigned Form Teacher of this class can compute results.");
+      }
     }
 
     const term = await prisma.term.findFirst({
@@ -109,7 +172,38 @@ export class ResultService {
     return this.getClassResults(schoolId, classId, termId);
   }
 
-  static async submitResults(schoolId: string, classId: string, termId: string, request: any) {
+  static async submitResults(
+    schoolId: string,
+    classId: string,
+    termId: string,
+    userId: string,
+    userRole: string,
+    request: any
+  ) {
+    const classEntity = await prisma.class.findFirst({
+      where: { id: classId, schoolId },
+    });
+
+    if (!classEntity) {
+      return failResponse("Class not found.");
+    }
+
+    // Role check: Only SchoolAdmin or the class's Form Teacher can submit class results
+    if (userRole === "Teacher") {
+      const teacher = await this.resolveTeacher(schoolId, userId);
+      if (!teacher || classEntity.formTeacherId !== teacher.id) {
+        return failResponse("Access Denied: Only the assigned Form Teacher of this class can submit results.");
+      }
+    }
+
+    // Validation: Verify if all teachers have inputted scores for all assigned subjects
+    const { allEntered, missingSubjects } = await this.checkAllSubjectsEntered(schoolId, classId, termId);
+    if (!allEntered) {
+      return failResponse(
+        `Cannot submit results. The following subjects do not have scores for all active students: ${missingSubjects.join(", ")}`
+      );
+    }
+
     const results = await prisma.result.findMany({
       where: { schoolId, classId, termId },
     });
@@ -118,19 +212,22 @@ export class ResultService {
       return failResponse("No results found. Please compute results first.");
     }
 
-    await prisma.result.updateMany({
-      where: {
-        schoolId,
-        classId,
-        termId,
-        status: "Draft",
-      },
-      data: {
-        status: "Submitted",
-        teacherComment: request.teacherComment || "",
-        submittedAt: new Date(),
-      },
+    // Map individual student comments
+    const remarksMap = new Map((request.remarks || []).map((r: any) => [r.studentId, r.comment]));
+
+    const operations = results.map((result) => {
+      const comment = remarksMap.get(result.studentId) || "";
+      return prisma.result.update({
+        where: { id: result.id },
+        data: {
+          status: "Submitted",
+          teacherComment: comment,
+          submittedAt: new Date(),
+        },
+      });
     });
+
+    await prisma.$transaction(operations);
 
     return successResponse(true, "Results submitted for approval.");
   }
