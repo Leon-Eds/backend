@@ -100,6 +100,10 @@ router.get("/:id", ClassController.getById);
  *               academicSessionId:
  *                 type: string
  *                 format: uuid
+ *               formTeacherId:
+ *                 type: string
+ *                 format: uuid
+ *                 nullable: true
  *     responses:
  *       201:
  *         description: Class created successfully
@@ -140,6 +144,10 @@ router.post("/", validateBody(createClassSchema), ClassController.create);
  *                 type: string
  *               arm:
  *                 type: string
+ *               formTeacherId:
+ *                 type: string
+ *                 format: uuid
+ *                 nullable: true
  *     responses:
  *       200:
  *         description: Class updated successfully
