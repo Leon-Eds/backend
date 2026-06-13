@@ -1,10 +1,13 @@
 import { Router } from "express";
 import { AnnouncementController } from "../controllers/announcement.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
 import { createAnnouncementSchema } from "../validations/announcement.validation";
 
 const router = Router();
+
+router.use(requireSchoolId);
 
 /**
  * @swagger
@@ -22,6 +25,12 @@ const router = Router();
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
  *       - in: query
  *         name: audience
  *         schema:
@@ -58,6 +67,12 @@ router.get("/", authMiddleware(), AnnouncementController.getAll);
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
  *       - in: path
  *         name: id
  *         required: true
@@ -80,6 +95,13 @@ router.get("/:id", authMiddleware(), AnnouncementController.getById);
  *     tags: [Announcements]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
  *     requestBody:
  *       required: true
  *       content:
@@ -117,6 +139,12 @@ router.post("/", authMiddleware(["SchoolAdmin"]), validateBody(createAnnouncemen
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
  *       - in: path
  *         name: id
  *         required: true
