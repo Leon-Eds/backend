@@ -101,6 +101,21 @@ export class AuthService {
       slug = `${slug}-${crypto.randomBytes(3).toString("hex")}`;
     }
 
+    let freePlan = await prisma.paymentPlan.findUnique({
+      where: { name: "Free" },
+    });
+
+    if (!freePlan) {
+      freePlan = await prisma.paymentPlan.create({
+        data: {
+          name: "Free",
+          amount: 0,
+          maxTeachers: 20,
+          maxStudents: 100,
+        },
+      });
+    }
+
     const school = await prisma.school.create({
       data: {
         name: request.schoolName,
@@ -108,7 +123,7 @@ export class AuthService {
         contactEmail: request.email.toLowerCase(),
         contactPhone: request.phone || "",
         slug,
-        subscriptionPlan: request.subscriptionPlan || "Free",
+        planId: freePlan.id,
         subscriptionStatus: "Active",
         isActive: true,
         schoolType: request.schoolType || null,
@@ -144,26 +159,48 @@ export class AuthService {
       },
     });
 
-    // Send welcome email immediately
     emailService.sendSchoolWelcomeEmail(
       user.email,
       user.name,
       school.name,
       school.slug,
-      school.subscriptionPlan
+      "Free"
     ).catch((err) => console.error("[AuthService] School welcome email error:", err));
 
     return successResponse(responseData, "School registered successfully.");
   }
 
   static async login(request: any) {
-    const user = await prisma.user.findFirst({
-      where: { email: request.email.toLowerCase() },
-      include: { school: true },
-    });
+    const input = (request.email || "").trim().toLowerCase();
+    const isEmail = input.includes("@");
+
+    let user = null;
+
+    if (isEmail) {
+      user = await prisma.user.findFirst({
+        where: { email: input },
+        include: { school: true },
+      });
+    } else {
+      // Find the student with this admission number
+      const student = await prisma.student.findFirst({
+        where: { admissionNumber: { equals: input, mode: "insensitive" } },
+        include: {
+          user: {
+            include: { school: true },
+          },
+        },
+      });
+      if (student && student.user) {
+        user = {
+          ...student.user,
+          school: student.user.school,
+        } as any;
+      }
+    }
 
     if (!user || !(await verifyPassword(request.password, user.passwordHash))) {
-      return failResponse("Invalid email or password.");
+      return failResponse("Invalid email/admission number or password.");
     }
 
     if (!user.isActive) {
@@ -303,7 +340,7 @@ export class AuthService {
   static async verifyOtp(request: any) {
     const user = await prisma.user.findUnique({
       where: { email: request.email.toLowerCase().trim() },
-      include: { school: true },
+      include: { school: { include: { plan: true } } },
     });
 
     if (!user) {
@@ -338,7 +375,7 @@ export class AuthService {
         updatedUser.name,
         user.school.name,
         user.school.slug,
-        user.school.subscriptionPlan
+        user.school.plan?.name || "Free"
       ).catch((err) => console.error("[AuthService] Welcome email error:", err));
     } else if (updatedUser.role === "SuperAdmin") {
       emailService.sendSuperAdminWelcomeEmail(updatedUser.email, updatedUser.name)

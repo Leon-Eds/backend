@@ -112,5 +112,52 @@ export const emailService = {
   async sendVerificationOtpEmail(to: string, name: string, otp: string) {
     const { subject, html } = emailTemplates.getVerificationOtp(name, otp);
     return sendMail(to, subject, html);
+  },
+
+  /**
+   * Send Subscription Welcome/Active Email
+   */
+  async sendSubscriptionWelcomeEmail(
+    to: string,
+    adminName: string,
+    schoolName: string,
+    planName: string,
+    amount: string,
+    maxTeachers: number,
+    maxStudents: number,
+    endedAt: Date | null
+  ) {
+    const { subject, html } = emailTemplates.getSubscriptionWelcome(adminName, schoolName, planName, amount, maxTeachers, maxStudents, endedAt);
+    return sendMail(to, subject, html);
+  },
+
+  /**
+   * Send Subscription Renewal Reminder Email
+   */
+  async sendSubscriptionRenewalReminderEmail(
+    to: string,
+    adminName: string,
+    schoolName: string,
+    planName: string,
+    endedAt: Date,
+    amount: string
+  ) {
+    const { subject, html } = emailTemplates.getSubscriptionRenewalReminder(adminName, schoolName, planName, endedAt, amount);
+    return sendMail(to, subject, html);
+  },
+
+  /**
+   * Send Subscription Downgrade Email
+   */
+  async sendSubscriptionDowngradedEmail(
+    to: string,
+    adminName: string,
+    schoolName: string,
+    planName: string,
+    maxTeachers: number,
+    maxStudents: number
+  ) {
+    const { subject, html } = emailTemplates.getSubscriptionDowngradedNotification(adminName, schoolName, planName, maxTeachers, maxStudents);
+    return sendMail(to, subject, html);
   }
 };

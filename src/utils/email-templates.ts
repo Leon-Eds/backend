@@ -517,5 +517,176 @@ export const emailTemplates = {
       `
     );
     return { subject, html };
+  },
+
+  /**
+   * 9. Subscription Active/Welcome Email
+   */
+  getSubscriptionWelcome(
+    adminName: string,
+    schoolName: string,
+    planName: string,
+    amount: string,
+    maxTeachers: number,
+    maxStudents: number,
+    endedAt: Date | null
+  ): { subject: string; html: string } {
+    const subject = `Your Subscription is Active: ${planName} Plan`;
+    const formattedDate = endedAt ? new Date(endedAt).toLocaleDateString("en-US", { dateStyle: "long" }) : "Indefinite / Manual Upgrade";
+    const teachersLimit = maxTeachers >= 999999 ? "Unlimited" : maxTeachers;
+    const studentsLimit = maxStudents >= 999999 ? "Unlimited" : maxStudents;
+
+    const html = wrapInShell(
+      subject,
+      `Subscription Active! 🎉`,
+      `
+      <h2>Thank You for Subscribing</h2>
+      <p>Hello <strong>${adminName}</strong>,</p>
+      <p>Your subscription is active for <strong>${schoolName}</strong>. You have been successfully upgraded to the <strong>${planName}</strong> plan.</p>
+      
+      <div class="alert-box">
+        ✓ Your school has access to the full benefits of the ${planName} plan!
+      </div>
+
+      <div class="card">
+        <table>
+          <tr>
+            <td class="label">Plan Name:</td>
+            <td class="value">${planName}</td>
+          </tr>
+          <tr>
+            <td class="label">Price:</td>
+            <td class="value">₦${amount} / month</td>
+          </tr>
+          <tr>
+            <td class="label">Max Teachers:</td>
+            <td class="value">${teachersLimit}</td>
+          </tr>
+          <tr>
+            <td class="label">Max Students:</td>
+            <td class="value">${studentsLimit}</td>
+          </tr>
+          <tr>
+            <td class="label">Next Payment Date:</td>
+            <td class="value">${formattedDate}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>Your features are active and available immediately. You can now add and manage your teachers and students up to your new limits.</p>
+      
+      <div style="text-align: center;">
+        <a href="https://leoned.app/login" class="btn" target="_blank">Access Your Dashboard</a>
+      </div>
+      `
+    );
+    return { subject, html };
+  },
+
+  /**
+   * 10. Subscription Renewal Reminder
+   */
+  getSubscriptionRenewalReminder(
+    adminName: string,
+    schoolName: string,
+    planName: string,
+    endedAt: Date,
+    amount: string
+  ): { subject: string; html: string } {
+    const subject = `LeonEd Africa Subscription Renewal Reminder`;
+    const formattedDate = new Date(endedAt).toLocaleDateString("en-US", { dateStyle: "long" });
+
+    const html = wrapInShell(
+      subject,
+      `Renewal Approaching 📅`,
+      `
+      <h2>Subscription Renewal Warning</h2>
+      <p>Hello <strong>${adminName}</strong>,</p>
+      <p>This is a friendly reminder that the subscription plan <strong>${planName}</strong> for <strong>${schoolName}</strong> is close to its renewal deadline on <strong>${formattedDate}</strong>.</p>
+      
+      <div class="alert-box-warning">
+        ⚠ Please ensure your payment card is funded to avoid any service disruptions or automatic downgrades.
+      </div>
+
+      <div class="card">
+        <table>
+          <tr>
+            <td class="label">School:</td>
+            <td class="value">${schoolName}</td>
+          </tr>
+          <tr>
+            <td class="label">Plan Name:</td>
+            <td class="value">${planName}</td>
+          </tr>
+          <tr>
+            <td class="label">Renewal Price:</td>
+            <td class="value">₦${amount}</td>
+          </tr>
+          <tr>
+            <td class="label">Renewal Date:</td>
+            <td class="value">${formattedDate}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>No action is needed if your card details are correct and up to date, as billing is automatic. If you need to update your payment information, please log in to your dashboard.</p>
+      
+      <div style="text-align: center;">
+        <a href="https://leoned.app/login" class="btn" target="_blank">Manage Subscription</a>
+      </div>
+      `
+    );
+    return { subject, html };
+  },
+
+  /**
+   * 11. Subscription Downgraded Notification
+   */
+  getSubscriptionDowngradedNotification(
+    adminName: string,
+    schoolName: string,
+    planName: string,
+    maxTeachers: number,
+    maxStudents: number
+  ): { subject: string; html: string } {
+    const subject = `Your LeonEd Africa Subscription has Expired`;
+    const html = wrapInShell(
+      subject,
+      `Subscription Expired ⚠`,
+      `
+      <h2>Service Downgraded to Free</h2>
+      <p>Hello <strong>${adminName}</strong>,</p>
+      <p>We were unable to process your subscription renewal payment for <strong>${schoolName}</strong>. As a result, your plan has been downgraded to the <strong>${planName}</strong> plan.</p>
+      
+      <div class="alert-box-warning">
+        ⚠ Your school accounts exceeding the limits of the Free plan are now temporarily suspended and inaccessible until you resubscribe.
+      </div>
+
+      <div class="card">
+        <table>
+          <tr>
+            <td class="label">Current Plan:</td>
+            <td class="value">${planName} (Free)</td>
+          </tr>
+          <tr>
+            <td class="label">Max Teachers Allowed:</td>
+            <td class="value">${maxTeachers}</td>
+          </tr>
+          <tr>
+            <td class="label">Max Students Allowed:</td>
+            <td class="value">${maxStudents}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>To reactivate all suspended teacher and student accounts, please log in and update your payment details or choose a new paid subscription plan.</p>
+      
+      <div style="text-align: center;">
+        <a href="https://leoned.app/login" class="btn-orange" target="_blank">Renew Subscription Now</a>
+      </div>
+      `
+    );
+    return { subject, html };
   }
 };
+

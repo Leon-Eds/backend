@@ -9,5 +9,5 @@ export const updateSchoolSchema = z.object({
 });
 
 export const updateSchoolPlanSchema = z.object({
-  subscriptionPlan: z.enum(["Free", "Plus", "Premium"]),
+  planId: z.string().uuid("Invalid plan ID format"),
 });

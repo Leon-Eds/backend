@@ -4,18 +4,6 @@ import { successResponse, failResponse, createPagedResult } from "../utils/respo
 import { emailService } from "../utils/email";
 
 export class TeacherService {
-  private static getPlanLimits(plan: "Free" | "Plus" | "Premium") {
-    switch (plan) {
-      case "Plus":
-        return 30;
-      case "Premium":
-        return 999999;
-      case "Free":
-      default:
-        return 20;
-    }
-  }
-
   private static mapToResponse(t: any) {
     return {
       id: t.id,
@@ -103,6 +91,7 @@ export class TeacherService {
       where: { id: schoolId },
       include: {
         teachers: { select: { isActive: true } },
+        plan: true,
       },
     });
 
@@ -111,11 +100,12 @@ export class TeacherService {
     }
 
     const activeCount = school.teachers.filter((t) => t.isActive).length;
-    const maxTeachers = this.getPlanLimits(school.subscriptionPlan);
+    const maxTeachers = school.plan?.maxTeachers ?? 20;
 
     if (activeCount >= maxTeachers) {
+      const planName = school.plan?.name || "Free";
       return failResponse(
-        `Teacher limit reached. Your ${school.subscriptionPlan} plan allows max ${maxTeachers} teachers. Upgrade your plan.`
+        `Teacher limit reached. Your ${planName} plan allows max ${maxTeachers} teachers. Upgrade your plan.`
       );
     }
 

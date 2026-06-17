@@ -5,17 +5,6 @@ import crypto from "crypto";
 import { emailService } from "../utils/email";
 
 export class StudentService {
-  private static getPlanLimits(plan: "Free" | "Plus" | "Premium") {
-    switch (plan) {
-      case "Plus":
-        return 200;
-      case "Premium":
-        return 999999;
-      case "Free":
-      default:
-        return 100;
-    }
-  }
 
   private static mapToResponse(s: any) {
     return {
@@ -96,6 +85,7 @@ export class StudentService {
       where: { id: schoolId },
       include: {
         students: { select: { status: true } },
+        plan: true,
       },
     });
 
@@ -104,39 +94,74 @@ export class StudentService {
     }
 
     const activeCount = school.students.filter((s) => s.status === "Active").length;
-    const maxStudents = this.getPlanLimits(school.subscriptionPlan);
+    const maxStudents = school.plan?.maxStudents ?? 100;
 
     if (activeCount >= maxStudents) {
+      const planName = school.plan?.name || "Free";
       return failResponse(
-        `Student limit reached. Your ${school.subscriptionPlan} plan allows max ${maxStudents} students. Upgrade your plan.`
+        `Student limit reached. Your ${planName} plan allows max ${maxStudents} students. Upgrade your plan.`
       );
     }
 
-    let admNo = request.admissionNumber;
-    if (!admNo || !admNo.trim()) {
-      const count = await prisma.student.count({ where: { schoolId } });
-      const year = new Date().getFullYear();
-      const seq = String(count + 1).padStart(4, "0");
-      admNo = `ADM/${year}/${seq}`;
-    } else {
-      const existingAdm = await prisma.student.findFirst({
-        where: { schoolId, admissionNumber: admNo },
-      });
-      if (existingAdm) {
-        return failResponse("Admission number already exists in this school.");
+    // 1. Generate prefix based on school initials & differentiator
+    function getSchoolInitials(name: string): string {
+      const words = name.trim().split(/\s+/).filter(w => w.length > 0);
+      if (words.length >= 3) {
+        return (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
+      } else if (words.length === 2) {
+        return (words[0][0] + words[1][0] + (words[1][1] || "X")).toUpperCase();
+      } else {
+        return name.substring(0, 3).padEnd(3, "X").toUpperCase();
       }
     }
 
-    const loginEmail = request.parentEmail && request.parentEmail.trim()
-      ? request.parentEmail.toLowerCase().trim()
-      : `${admNo.replace(/\//g, "").toLowerCase()}@${school.slug}.leoned.com`;
+    const baseInitials = getSchoolInitials(school.name);
+
+    // Find all schools sorted by createdAt to deterministically resolve differentiator
+    const allSchools = await prisma.school.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true }
+    });
+
+    const matchingSchools = allSchools.filter(s => getSchoolInitials(s.name) === baseInitials);
+    const schoolIndex = matchingSchools.findIndex(s => s.id === school.id);
+    const prefix = schoolIndex <= 0 ? baseInitials : `${baseInitials}${schoolIndex + 1}`;
+
+    // 2. Generate incremental sequence number for current year
+    const year = new Date().getFullYear();
+    const studentsInYear = await prisma.student.findMany({
+      where: {
+        schoolId,
+        admissionNumber: {
+          startsWith: `${prefix}-${year}-`
+        }
+      },
+      select: { admissionNumber: true }
+    });
+
+    let nextNum = 1;
+    if (studentsInYear.length > 0) {
+      const numbers = studentsInYear.map(s => {
+        const parts = s.admissionNumber.split("-");
+        const lastPart = parts[parts.length - 1];
+        const num = parseInt(lastPart, 10);
+        return isNaN(num) ? 0 : num;
+      });
+      nextNum = Math.max(...numbers) + 1;
+    }
+
+    const seq = String(nextNum).padStart(4, "0");
+    const admNo = `${prefix}-${year}-${seq}`;
+
+    // 3. Generate globally unique Student User login email based on Admission Number
+    const loginEmail = `${admNo.toLowerCase()}@student.leoned.com`;
 
     const emailExists = await prisma.user.findFirst({
       where: { email: loginEmail },
     });
 
     if (emailExists) {
-      return failResponse("Parent email is already associated with another account.");
+      return failResponse("A student account with this admission number already exists.");
     }
 
     const rawPassword = request.password && request.password.trim() ? request.password.trim() : "Student@123!";
@@ -186,7 +211,7 @@ export class StudentService {
         student.parentName,
         student.fullName,
         school.name,
-        loginEmail,
+        admNo, // Pass admission number as systemEmail so it displays as the Login ID
         admNo,
         rawPassword
       ).catch((err) => console.error("[StudentService] Onboarding email error:", err));

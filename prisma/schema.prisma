@@ -92,6 +92,13 @@ model School {
   isActive           Boolean            @default(true)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime?          @updatedAt
+  planId             String?            @db.Uuid
+  subscriptionEndedAt DateTime?
+  paystackSubscriptionCode String?      @db.VarChar(150)
+  paystackCustomerCode     String?      @db.VarChar(150)
+  paystackEmailToken       String?      @db.VarChar(150)
+
+  plan             PaymentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 
   users            User[]
   students         Student[]
@@ -148,6 +155,7 @@ model Student {
   parentPhone       String        @default("") @db.VarChar(30)
   parentEmail       String        @default("") @db.VarChar(150)
   status            StudentStatus @default(Active)
+  suspendedBySubscription Boolean @default(false)
   arm               String?       @db.VarChar(50)
   bloodGroup        String?       @db.VarChar(20)
   enrolledAt        DateTime      @default(now())
@@ -173,6 +181,7 @@ model Teacher {
   phone             String    @default("") @db.VarChar(30)
   profilePictureUrl String    @default("") @db.VarChar(500)
   isActive          Boolean   @default(true)
+  suspendedBySubscription Boolean @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime? @updatedAt
 
@@ -425,4 +434,19 @@ model Attendance {
   @@unique([schoolId, studentId, date])
   @@index([schoolId, classId, date])
 }
+
+model PaymentPlan {
+  id               String       @id @default(uuid()) @db.Uuid
+  name             String       @unique @db.VarChar(150)
+  amount           Decimal      @db.Decimal(12, 2)
+  maxTeachers      Int
+  maxStudents      Int
+  isActive         Boolean      @default(true)
+  paystackPlanCode String?      @db.VarChar(150)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime?    @updatedAt
+
+  schools          School[]
+}
+
 

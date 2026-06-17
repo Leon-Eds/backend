@@ -48,8 +48,8 @@ export class SchoolController {
   static async updatePlan(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { subscriptionPlan } = req.body;
-      const result = await SchoolService.updateSchoolPlan(id, subscriptionPlan);
+      const { planId } = req.body;
+      const result = await SchoolService.updateSchoolPlan(id, planId);
       if (result.success) {
         return res.status(200).json(result);
       }

@@ -2,35 +2,11 @@ import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
 
 export class DashboardService {
-  private static getMaxTeachers(plan: string): number {
-    switch (plan) {
-      case "Free":
-        return 20;
-      case "Plus":
-        return 30;
-      case "Premium":
-        return 999999; // Using 999999 to represent infinite/unlimited
-      default:
-        return 20;
-    }
-  }
-
-  private static getMaxStudents(plan: string): number {
-    switch (plan) {
-      case "Free":
-        return 100;
-      case "Plus":
-        return 200;
-      case "Premium":
-        return 999999;
-      default:
-        return 100;
-    }
-  }
 
   static async getSchoolDashboard(schoolId: string) {
     const school = await prisma.school.findUnique({
       where: { id: schoolId },
+      include: { plan: true },
     });
 
     if (!school) {
@@ -85,14 +61,14 @@ export class DashboardService {
     return successResponse({
       schoolId: school.id,
       schoolName: school.name,
-      subscriptionPlan: school.subscriptionPlan,
+      subscriptionPlan: school.plan?.name || "Free",
       totalStudents,
       totalTeachers,
       totalFaculty: totalTeachers,
       totalClasses,
       totalSubjects,
-      maxStudents: this.getMaxStudents(school.subscriptionPlan),
-      maxTeachers: this.getMaxTeachers(school.subscriptionPlan),
+      maxStudents: school.plan?.maxStudents ?? 100,
+      maxTeachers: school.plan?.maxTeachers ?? 20,
       currentSession: currentSession?.name || null,
       currentTerm: currentTerm?.termNumber || null,
       pendingResults,
@@ -113,17 +89,23 @@ export class DashboardService {
       where: { isActive: true },
     });
 
-    const freeSchools = await prisma.school.count({
-      where: { subscriptionPlan: "Free" },
+    const plans = await prisma.paymentPlan.findMany({
+      include: {
+        _count: {
+          select: { schools: true },
+        },
+      },
     });
 
-    const plusSchools = await prisma.school.count({
-      where: { subscriptionPlan: "Plus" },
+    const freeSchoolsCount = await prisma.school.count({
+      where: { planId: null },
     });
 
-    const premiumSchools = await prisma.school.count({
-      where: { subscriptionPlan: "Premium" },
-    });
+    const planBreakdown: Record<string, number> = {};
+    planBreakdown["Free"] = freeSchoolsCount;
+    for (const p of plans) {
+      planBreakdown[p.name] = p._count.schools;
+    }
 
     return successResponse({
       totalSchools,
@@ -131,11 +113,7 @@ export class DashboardService {
       suspendedSchools,
       totalStudentsAcrossSchools,
       totalTeachersAcrossSchools,
-      planBreakdown: {
-        freeSchools,
-        plusSchools,
-        premiumSchools,
-      },
+      planBreakdown,
     });
   }
 
