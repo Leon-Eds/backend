@@ -167,4 +167,144 @@ export class AcademicSessionService {
 
     return successResponse(true, "Current term set successfully.");
   }
+
+  static async updateSession(schoolId: string, sessionId: string, request: any) {
+    const session = await prisma.academicSession.findFirst({
+      where: { id: sessionId, schoolId },
+    });
+
+    if (!session) {
+      return failResponse("Academic session not found.");
+    }
+
+    const data: any = {};
+    if (request.name !== undefined) data.name = request.name;
+    if (request.startDate !== undefined) data.startDate = new Date(request.startDate);
+    if (request.endDate !== undefined) data.endDate = new Date(request.endDate);
+
+    const updated = await prisma.academicSession.update({
+      where: { id: sessionId },
+      data,
+      include: { terms: true },
+    });
+
+    return successResponse(this.mapToResponse(updated), "Academic session updated successfully.");
+  }
+
+  static async deleteSession(schoolId: string, sessionId: string) {
+    const session = await prisma.academicSession.findFirst({
+      where: { id: sessionId, schoolId },
+    });
+
+    if (!session) {
+      return failResponse("Academic session not found.");
+    }
+
+    // Check references to prevent foreign key errors for NoAction relations
+    const scoreCount = await prisma.score.count({
+      where: { academicSessionId: sessionId },
+    });
+    const resultCount = await prisma.result.count({
+      where: { academicSessionId: sessionId },
+    });
+    const feeCount = await prisma.feePayment.count({
+      where: { academicSessionId: sessionId },
+    });
+
+    if (scoreCount > 0 || resultCount > 0 || feeCount > 0) {
+      return failResponse(
+        "Cannot delete academic session because it is referenced by existing scores, results, or fee payments."
+      );
+    }
+
+    await prisma.academicSession.delete({
+      where: { id: sessionId },
+    });
+
+    return successResponse(true, "Academic session deleted successfully.");
+  }
+
+  static async updateTerm(schoolId: string, termId: string, request: any) {
+    const term = await prisma.term.findFirst({
+      where: {
+        id: termId,
+        academicSession: { schoolId },
+      },
+    });
+
+    if (!term) {
+      return failResponse("Term not found.");
+    }
+
+    const data: any = {};
+    if (request.termNumber !== undefined) {
+      // Check if another term in the same session has this termNumber
+      const termExists = await prisma.term.findFirst({
+        where: {
+          academicSessionId: term.academicSessionId,
+          termNumber: request.termNumber,
+          NOT: { id: termId },
+        },
+      });
+
+      if (termExists) {
+        return failResponse("This term number already exists in this session.");
+      }
+      data.termNumber = request.termNumber;
+    }
+    if (request.startDate !== undefined) data.startDate = new Date(request.startDate);
+    if (request.endDate !== undefined) data.endDate = new Date(request.endDate);
+
+    const updated = await prisma.term.update({
+      where: { id: termId },
+      data,
+    });
+
+    return successResponse(
+      {
+        id: updated.id,
+        termNumber: updated.termNumber,
+        startDate: updated.startDate,
+        endDate: updated.endDate,
+        isCurrent: updated.isCurrent,
+      },
+      "Term updated successfully."
+    );
+  }
+
+  static async deleteTerm(schoolId: string, termId: string) {
+    const term = await prisma.term.findFirst({
+      where: {
+        id: termId,
+        academicSession: { schoolId },
+      },
+    });
+
+    if (!term) {
+      return failResponse("Term not found.");
+    }
+
+    // Check references to prevent foreign key errors for NoAction relations
+    const scoreCount = await prisma.score.count({
+      where: { termId },
+    });
+    const resultCount = await prisma.result.count({
+      where: { termId },
+    });
+    const feeCount = await prisma.feePayment.count({
+      where: { termId },
+    });
+
+    if (scoreCount > 0 || resultCount > 0 || feeCount > 0) {
+      return failResponse(
+        "Cannot delete term because it is referenced by existing scores, results, or fee payments."
+      );
+    }
+
+    await prisma.term.delete({
+      where: { id: termId },
+    });
+
+    return successResponse(true, "Term deleted successfully.");
+  }
 }

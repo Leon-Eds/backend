@@ -3,7 +3,7 @@ import { AcademicSessionController } from "../controllers/session.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
-import { createSessionSchema, createTermSchema } from "../validations/session.validation";
+import { createSessionSchema, createTermSchema, updateSessionSchema, updateTermSchema } from "../validations/session.validation";
 
 const router = Router();
 
@@ -182,5 +182,144 @@ router.post("/:id/terms", validateBody(createTermSchema), AcademicSessionControl
  *         description: Term not found
  */
 router.put("/terms/:termId/current", AcademicSessionController.setCurrentTerm);
+
+/**
+ * @swagger
+ * /api/academicsession/{id}:
+ *   put:
+ *     summary: Update an academic session
+ *     tags: [Academic Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The session ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Session updated successfully
+ */
+router.put("/:id", validateBody(updateSessionSchema), AcademicSessionController.updateSession);
+
+/**
+ * @swagger
+ * /api/academicsession/{id}:
+ *   delete:
+ *     summary: Delete an academic session
+ *     tags: [Academic Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The session ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Session deleted successfully
+ */
+router.delete("/:id", AcademicSessionController.deleteSession);
+
+/**
+ * @swagger
+ * /api/academicsession/terms/{termId}:
+ *   put:
+ *     summary: Update a school term
+ *     tags: [Academic Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The term ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               termNumber:
+ *                 type: string
+ *                 enum: [First, Second, Third]
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Term updated successfully
+ */
+router.put("/terms/:termId", validateBody(updateTermSchema), AcademicSessionController.updateTerm);
+
+/**
+ * @swagger
+ * /api/academicsession/terms/{termId}:
+ *   delete:
+ *     summary: Delete a school term
+ *     tags: [Academic Sessions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The term ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Term deleted successfully
+ */
+router.delete("/terms/:termId", AcademicSessionController.deleteTerm);
 
 export default router;

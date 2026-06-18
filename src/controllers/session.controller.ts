@@ -67,4 +67,60 @@ export class AcademicSessionController {
       next(error);
     }
   }
+
+  static async updateSession(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+      const result = await AcademicSessionService.updateSession(schoolId, id, req.body);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteSession(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+      const result = await AcademicSessionService.deleteSession(schoolId, id);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateTerm(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { termId } = req.params;
+      const result = await AcademicSessionService.updateTerm(schoolId, termId, req.body);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteTerm(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { termId } = req.params;
+      const result = await AcademicSessionService.deleteTerm(schoolId, termId);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
