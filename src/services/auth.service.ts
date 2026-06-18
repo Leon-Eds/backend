@@ -26,6 +26,7 @@ export class AuthService {
         profilePictureUrl: user.profilePictureUrl || "",
         schoolLogoUrl: schoolLogoUrl || "",
         isVerified: user.isVerified || false,
+        subscriptionPlan: user.school?.plan?.name || "Free",
       },
     };
   }
@@ -149,7 +150,14 @@ export class AuthService {
       },
     });
 
-    const responseData = this.generateAuthResponseData(user, school.name, school.logoUrl);
+    const userWithSchool = {
+      ...user,
+      school: {
+        ...school,
+        plan: { name: "Free" }
+      }
+    };
+    const responseData = this.generateAuthResponseData(userWithSchool, school.name, school.logoUrl);
 
     await prisma.user.update({
       where: { id: user.id },
@@ -179,7 +187,7 @@ export class AuthService {
     if (isEmail) {
       user = await prisma.user.findFirst({
         where: { email: input },
-        include: { school: true },
+        include: { school: { include: { plan: true } } },
       });
     } else {
       // Find the student with this admission number
@@ -187,7 +195,7 @@ export class AuthService {
         where: { admissionNumber: { equals: input, mode: "insensitive" } },
         include: {
           user: {
-            include: { school: true },
+            include: { school: { include: { plan: true } } },
           },
         },
       });
@@ -234,7 +242,7 @@ export class AuthService {
   static async refreshToken(request: any) {
     const user = await prisma.user.findFirst({
       where: { refreshToken: request.refreshToken },
-      include: { school: true },
+      include: { school: { include: { plan: true } } },
     });
 
     if (!user || !user.refreshTokenExpiry || user.refreshTokenExpiry < new Date()) {
