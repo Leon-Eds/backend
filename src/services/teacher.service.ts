@@ -207,7 +207,7 @@ export class TeacherService {
     return successResponse(this.mapToResponse(updatedTeacher), "Teacher updated successfully.");
   }
 
-  static async updateTeacherStatus(schoolId: string, teacherId: string, isActive: boolean) {
+  static async updateTeacherStatus(schoolId: string, teacherId: string, isActive?: boolean) {
     const teacher = await prisma.teacher.findFirst({
       where: { id: teacherId, schoolId },
     });
@@ -216,20 +216,22 @@ export class TeacherService {
       return failResponse("Teacher not found.");
     }
 
+    const newStatus = isActive !== undefined ? isActive : !teacher.isActive;
+
     await prisma.teacher.update({
       where: { id: teacherId },
-      data: { isActive },
+      data: { isActive: newStatus },
     });
 
     if (teacher.userId) {
       await prisma.user.update({
         where: { id: teacher.userId },
-        data: { isActive },
+        data: { isActive: newStatus },
       });
     }
 
-    const message = isActive ? "Teacher activated." : "Teacher deactivated.";
-    return successResponse(true, message);
+    const message = newStatus ? "Teacher activated." : "Teacher deactivated.";
+    return successResponse(newStatus, message);
   }
 
   static async assignTeacher(schoolId: string, teacherId: string, request: any) {

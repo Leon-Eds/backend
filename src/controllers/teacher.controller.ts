@@ -58,7 +58,8 @@ export class TeacherController {
     try {
       const schoolId = req.schoolId!;
       const { id } = req.params;
-      const isActive = req.query.isActive === "true";
+      const isActiveQuery = req.query.isActive;
+      const isActive = isActiveQuery !== undefined ? isActiveQuery === "true" : undefined;
       const result = await TeacherService.updateTeacherStatus(schoolId, id, isActive);
       if (result.success) {
         return res.status(200).json(result);
