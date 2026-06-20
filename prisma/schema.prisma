@@ -112,6 +112,7 @@ model School {
   feePayments      FeePayment[]
   announcements    Announcement[]
   attendances      Attendance[]
+  parents          Parent[]
 }
 
 model User {
@@ -141,19 +142,35 @@ model User {
   announcements      Announcement[]     @relation("UserToAnnouncement")
 }
 
+model Parent {
+  id                String    @id @default(uuid()) @db.Uuid
+  schoolId          String    @db.Uuid
+  fullName          String    @db.VarChar(200)
+  email             String    @db.VarChar(200)
+  phone             String    @default("") @db.VarChar(30)
+  passportUrl       String    @default("") @db.VarChar(500)
+  idNumber          String    @default("") @db.VarChar(100)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime? @updatedAt
+
+  school            School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  students          Student[]
+
+  @@unique([schoolId, email])
+  @@index([schoolId])
+}
+
 model Student {
   id                String        @id @default(uuid()) @db.Uuid
   schoolId          String        @db.Uuid
   classId           String?       @db.Uuid
   userId            String?       @db.Uuid
+  parentId          String?       @db.Uuid
   fullName          String        @db.VarChar(200)
   admissionNumber   String        @db.VarChar(50)
   gender            Gender
   dateOfBirth       DateTime?     @db.Date
   profilePictureUrl String        @default("") @db.VarChar(500)
-  parentName        String        @default("") @db.VarChar(200)
-  parentPhone       String        @default("") @db.VarChar(30)
-  parentEmail       String        @default("") @db.VarChar(150)
   status            StudentStatus @default(Active)
   suspendedBySubscription Boolean @default(false)
   arm               String?       @db.VarChar(50)
@@ -163,6 +180,7 @@ model Student {
   school          School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class           Class?        @relation(fields: [classId], references: [id], onDelete: SetNull)
   user            User?         @relation("UserToStudent", fields: [userId], references: [id], onDelete: SetNull)
+  parent          Parent?       @relation(fields: [parentId], references: [id], onDelete: SetNull)
   scores          Score[]
   results         Result[]
   feePayments     FeePayment[]

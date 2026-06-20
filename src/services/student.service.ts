@@ -7,6 +7,7 @@ import { emailService } from "../utils/email";
 export class StudentService {
 
   private static mapToResponse(s: any) {
+    const parent = s.parent || null;
     return {
       id: s.id,
       fullName: s.fullName,
@@ -14,9 +15,19 @@ export class StudentService {
       gender: s.gender,
       dateOfBirth: s.dateOfBirth,
       profilePictureUrl: s.profilePictureUrl || "",
-      parentName: s.parentName,
-      parentPhone: s.parentPhone,
-      parentEmail: s.parentEmail,
+      // Backward-compatible flat fields
+      parentName: parent?.fullName || "",
+      parentPhone: parent?.phone || "",
+      parentEmail: parent?.email || "",
+      // New parent object with full details
+      parent: parent ? {
+        id: parent.id,
+        fullName: parent.fullName,
+        email: parent.email,
+        phone: parent.phone,
+        passportUrl: parent.passportUrl || "",
+        idNumber: parent.idNumber || "",
+      } : null,
       status: s.status,
       classId: s.classId,
       className: s.class ? `${s.class.name} ${s.class.arm}`.trim() : null,
@@ -26,6 +37,70 @@ export class StudentService {
       arm: s.arm || null,
       bloodGroup: s.bloodGroup || null,
     };
+  }
+
+  /**
+   * Find an existing parent by email within a school, or create a new one.
+   */
+  private static async findOrCreateParent(
+    schoolId: string,
+    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string }
+  ) {
+    if (!data.parentEmail || data.parentEmail.trim() === "") {
+      return null;
+    }
+
+    const email = data.parentEmail.trim().toLowerCase();
+
+    // Check if parent already exists in this school
+    let parent = await prisma.parent.findUnique({
+      where: {
+        schoolId_email: {
+          schoolId,
+          email,
+        },
+      },
+    });
+
+    if (parent) {
+      // Update parent details if new info is provided
+      const updateData: any = {};
+      if (data.parentName && data.parentName.trim() !== "" && data.parentName !== parent.fullName) {
+        updateData.fullName = data.parentName;
+      }
+      if (data.parentPhone !== undefined && data.parentPhone !== parent.phone) {
+        updateData.phone = data.parentPhone;
+      }
+      if (data.parentPassportUrl !== undefined && data.parentPassportUrl !== parent.passportUrl) {
+        updateData.passportUrl = data.parentPassportUrl;
+      }
+      if (data.parentIdNumber !== undefined && data.parentIdNumber !== parent.idNumber) {
+        updateData.idNumber = data.parentIdNumber;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        parent = await prisma.parent.update({
+          where: { id: parent.id },
+          data: updateData,
+        });
+      }
+
+      return parent;
+    }
+
+    // Create new parent
+    parent = await prisma.parent.create({
+      data: {
+        schoolId,
+        fullName: data.parentName || "",
+        email,
+        phone: data.parentPhone || "",
+        passportUrl: data.parentPassportUrl || "",
+        idNumber: data.parentIdNumber || "",
+      },
+    });
+
+    return parent;
   }
 
   static async getStudents(schoolId: string, params: any) {
@@ -55,6 +130,7 @@ export class StudentService {
       include: {
         class: true,
         user: true,
+        parent: true,
       },
     });
 
@@ -70,6 +146,7 @@ export class StudentService {
       include: {
         class: true,
         user: true,
+        parent: true,
       },
     });
 
@@ -178,6 +255,15 @@ export class StudentService {
       },
     });
 
+    // 4. Find or create parent record
+    const parent = await this.findOrCreateParent(schoolId, {
+      parentName: request.parentName || "",
+      parentEmail: request.parentEmail || "",
+      parentPhone: request.parentPhone || "",
+      parentPassportUrl: request.parentPassportUrl || "",
+      parentIdNumber: request.parentIdNumber || "",
+    });
+
     // Handle date parsing safely
     const dob = request.dateOfBirth ? new Date(request.dateOfBirth) : null;
 
@@ -185,15 +271,13 @@ export class StudentService {
       data: {
         schoolId,
         userId: user.id,
+        parentId: parent?.id || null,
         fullName: request.fullName,
         admissionNumber: admNo,
         gender: request.gender,
         dateOfBirth: dob,
         classId: request.classId || null,
         profilePictureUrl: request.profilePictureUrl || "",
-        parentName: request.parentName || "",
-        parentPhone: request.parentPhone || "",
-        parentEmail: request.parentEmail || "",
         status: "Active",
         arm: request.arm || null,
         bloodGroup: request.bloodGroup || null,
@@ -201,14 +285,17 @@ export class StudentService {
       include: {
         class: true,
         user: true,
+        parent: true,
       },
     });
 
     // Send student/parent onboarding email asynchronously
-    if (student.parentEmail && student.parentEmail.trim() !== "") {
+    const parentEmail = parent?.email || "";
+    const parentName = parent?.fullName || "";
+    if (parentEmail && parentEmail.trim() !== "") {
       emailService.sendStudentWelcomeEmail(
-        student.parentEmail,
-        student.parentName,
+        parentEmail,
+        parentName,
         student.fullName,
         school.name,
         admNo, // Pass admission number as systemEmail so it displays as the Login ID
@@ -223,11 +310,51 @@ export class StudentService {
   static async updateStudent(schoolId: string, studentId: string, request: any) {
     const student = await prisma.student.findFirst({
       where: { id: studentId, schoolId },
-      include: { user: true },
+      include: { user: true, parent: true },
     });
 
     if (!student) {
       return failResponse("Student not found.");
+    }
+
+    // Handle parent update: if parent details are provided, find-or-create/update
+    let newParentId = undefined; // undefined = don't change
+    const hasParentUpdate = request.parentName !== undefined ||
+      request.parentEmail !== undefined ||
+      request.parentPhone !== undefined ||
+      request.parentPassportUrl !== undefined ||
+      request.parentIdNumber !== undefined;
+
+    if (hasParentUpdate) {
+      const parentEmail = request.parentEmail !== undefined
+        ? request.parentEmail
+        : (student.parent?.email || "");
+      const parentName = request.parentName !== undefined
+        ? request.parentName
+        : (student.parent?.fullName || "");
+      const parentPhone = request.parentPhone !== undefined
+        ? request.parentPhone
+        : (student.parent?.phone || "");
+      const parentPassportUrl = request.parentPassportUrl !== undefined
+        ? request.parentPassportUrl
+        : (student.parent?.passportUrl || "");
+      const parentIdNumber = request.parentIdNumber !== undefined
+        ? request.parentIdNumber
+        : (student.parent?.idNumber || "");
+
+      if (parentEmail && parentEmail.trim() !== "") {
+        const parent = await this.findOrCreateParent(schoolId, {
+          parentName,
+          parentEmail,
+          parentPhone,
+          parentPassportUrl,
+          parentIdNumber,
+        });
+        newParentId = parent?.id || null;
+      } else {
+        // Email cleared — unlink parent
+        newParentId = null;
+      }
     }
 
     const dob = request.dateOfBirth !== undefined ? (request.dateOfBirth ? new Date(request.dateOfBirth) : null) : undefined;
@@ -240,16 +367,15 @@ export class StudentService {
         dateOfBirth: dob,
         classId: request.classId !== undefined ? request.classId : undefined,
         profilePictureUrl: request.profilePictureUrl !== undefined ? request.profilePictureUrl : undefined,
-        parentName: request.parentName !== undefined ? request.parentName : undefined,
-        parentPhone: request.parentPhone !== undefined ? request.parentPhone : undefined,
-        parentEmail: request.parentEmail !== undefined ? request.parentEmail : undefined,
         status: request.status !== undefined ? request.status : undefined,
         arm: request.arm !== undefined ? request.arm : undefined,
         bloodGroup: request.bloodGroup !== undefined ? request.bloodGroup : undefined,
+        parentId: newParentId,
       },
       include: {
         class: true,
         user: true,
+        parent: true,
       },
     });
 
@@ -310,6 +436,7 @@ export class StudentService {
       include: {
         class: true,
         user: true,
+        parent: true,
       },
     });
 

@@ -98,6 +98,11 @@ router.get("/:id", StudentController.getById);
  * /api/student:
  *   post:
  *     summary: Create a new student
+ *     description: >
+ *       Creates a new student and optionally links a parent/guardian.
+ *       If a parent with the given email already exists in this school,
+ *       the student is linked to the existing parent (no duplicate created).
+ *       If no parent exists with that email, a new parent record is created.
  *     tags: [Students]
  *     security:
  *       - bearerAuth: []
@@ -120,8 +125,6 @@ router.get("/:id", StudentController.getById);
  *             properties:
  *               fullName:
  *                 type: string
- *               admissionNumber:
- *                 type: string
  *               gender:
  *                 type: string
  *                 enum: [Male, Female]
@@ -133,19 +136,36 @@ router.get("/:id", StudentController.getById);
  *                 format: uuid
  *               parentName:
  *                 type: string
+ *                 description: Full name of the parent/guardian
  *               parentPhone:
  *                 type: string
+ *                 description: Phone number of the parent/guardian
  *               parentEmail:
  *                 type: string
+ *                 description: Email of the parent/guardian (used for deduplication)
+ *               parentPassportUrl:
+ *                 type: string
+ *                 description: URL of the parent's passport photograph
+ *               parentIdNumber:
+ *                 type: string
+ *                 description: Parent's ID card number (e.g. NIN, driver's license)
  *               password:
  *                 type: string
  *                 description: Optional login password for the student account (defaults to Student@123! if not provided)
  *               profilePictureUrl:
  *                 type: string
  *                 description: URL of the student's profile picture
+ *               arm:
+ *                 type: string
+ *                 description: Class arm (e.g. A, B, C)
+ *               bloodGroup:
+ *                 type: string
+ *                 description: Student's blood group
  *     responses:
  *       201:
  *         description: Student created successfully
+ *       400:
+ *         description: Validation error or student limit reached
  */
 router.post("/", validateBody(createStudentSchema), StudentController.create);
 
@@ -154,6 +174,10 @@ router.post("/", validateBody(createStudentSchema), StudentController.create);
  * /api/student/{id}:
  *   put:
  *     summary: Update a student
+ *     description: >
+ *       Updates student details and optionally updates the linked parent/guardian.
+ *       If parentEmail changes to a different email, the student will be re-linked
+ *       to an existing parent or a new parent will be created.
  *     tags: [Students]
  *     security:
  *       - bearerAuth: []
@@ -190,16 +214,29 @@ router.post("/", validateBody(createStudentSchema), StudentController.create);
  *                 format: uuid
  *               parentName:
  *                 type: string
+ *                 description: Full name of the parent/guardian
  *               parentPhone:
  *                 type: string
+ *                 description: Phone number of the parent/guardian
  *               parentEmail:
  *                 type: string
+ *                 description: Email of the parent/guardian
+ *               parentPassportUrl:
+ *                 type: string
+ *                 description: URL of the parent's passport photograph
+ *               parentIdNumber:
+ *                 type: string
+ *                 description: Parent's ID card number
  *               status:
  *                 type: string
  *                 enum: [Active, Graduated, Archived, Suspended]
  *               profilePictureUrl:
  *                 type: string
  *                 description: URL of the student's profile picture
+ *               arm:
+ *                 type: string
+ *               bloodGroup:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Student updated successfully
