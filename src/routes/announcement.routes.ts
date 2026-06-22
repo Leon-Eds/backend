@@ -7,8 +7,6 @@ import { createAnnouncementSchema } from "../validations/announcement.validation
 
 const router = Router();
 
-router.use(requireSchoolId);
-
 /**
  * @swagger
  * tags:
@@ -56,7 +54,7 @@ router.use(requireSchoolId);
  *       401:
  *         description: Unauthorized
  */
-router.get("/", authMiddleware(), AnnouncementController.getAll);
+router.get("/", authMiddleware(), requireSchoolId, AnnouncementController.getAll);
 
 /**
  * @swagger
@@ -85,7 +83,7 @@ router.get("/", authMiddleware(), AnnouncementController.getAll);
  *       404:
  *         description: Not found
  */
-router.get("/:id", authMiddleware(), AnnouncementController.getById);
+router.get("/:id", authMiddleware(), requireSchoolId, AnnouncementController.getById);
 
 /**
  * @swagger
@@ -128,7 +126,7 @@ router.get("/:id", authMiddleware(), AnnouncementController.getById);
  *       400:
  *         description: Bad request
  */
-router.post("/", authMiddleware(["SchoolAdmin"]), validateBody(createAnnouncementSchema), AnnouncementController.create);
+router.post("/", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(createAnnouncementSchema), AnnouncementController.create);
 
 /**
  * @swagger
@@ -157,6 +155,6 @@ router.post("/", authMiddleware(["SchoolAdmin"]), validateBody(createAnnouncemen
  *       404:
  *         description: Not found
  */
-router.delete("/:id", authMiddleware(["SchoolAdmin"]), AnnouncementController.delete);
+router.delete("/:id", authMiddleware(["SchoolAdmin"]), requireSchoolId, AnnouncementController.delete);
 
 export default router;

@@ -7,8 +7,6 @@ import { bulkCreateGradingRulesSchema } from "../validations/grading.validation"
 
 const router = Router();
 
-router.use(requireSchoolId);
-
 /**
  * @swagger
  * tags:
@@ -62,7 +60,7 @@ router.use(requireSchoolId);
  *       200:
  *         description: Grading rules configured successfully
  */
-router.post("/rules", authMiddleware(["SchoolAdmin"]), validateBody(bulkCreateGradingRulesSchema), GradingController.setGradingRules);
+router.post("/rules", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(bulkCreateGradingRulesSchema), GradingController.setGradingRules);
 
 /**
  * @swagger
@@ -83,6 +81,6 @@ router.post("/rules", authMiddleware(["SchoolAdmin"]), validateBody(bulkCreateGr
  *       200:
  *         description: Grading rules retrieved successfully
  */
-router.get("/rules", authMiddleware(["SchoolAdmin", "Teacher"]), GradingController.getGradingRules);
+router.get("/rules", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, GradingController.getGradingRules);
 
 export default router;

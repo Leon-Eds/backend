@@ -7,9 +7,6 @@ import { recordAttendanceSchema } from "../validations/attendance.validation";
 
 const router = Router();
 
-// Apply general guards
-router.use(requireSchoolId);
-
 /**
  * @swagger
  * tags:
@@ -39,6 +36,7 @@ router.use(requireSchoolId);
 router.get(
   "/my-form-classes",
   authMiddleware(["Teacher"]),
+  requireSchoolId,
   AttendanceController.getMyFormClasses
 );
 
@@ -76,6 +74,7 @@ router.get(
 router.get(
   "/class/:classId",
   authMiddleware(["SchoolAdmin", "Teacher"]),
+  requireSchoolId,
   AttendanceController.getClassAttendanceSheet
 );
 
@@ -141,6 +140,7 @@ router.get(
 router.post(
   "/class/:classId",
   authMiddleware(["SchoolAdmin", "Teacher"]),
+  requireSchoolId,
   validateBody(recordAttendanceSchema),
   AttendanceController.recordClassAttendance
 );
@@ -185,6 +185,7 @@ router.post(
 router.get(
   "/class/:classId/stats",
   authMiddleware(["SchoolAdmin", "Teacher"]),
+  requireSchoolId,
   AttendanceController.getClassAttendanceStats
 );
 

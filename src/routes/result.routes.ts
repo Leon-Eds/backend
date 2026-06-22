@@ -7,8 +7,6 @@ import { submitResultSchema, approveResultSchema } from "../validations/result.v
 
 const router = Router();
 
-router.use(requireSchoolId);
-
 /**
  * @swagger
  * tags:
@@ -47,7 +45,7 @@ router.use(requireSchoolId);
  *       200:
  *         description: Results computed successfully
  */
-router.post("/compute/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), ResultController.computeClassResults);
+router.post("/compute/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.computeClassResults);
 
 /**
  * @swagger
@@ -99,7 +97,7 @@ router.post("/compute/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher
  *       200:
  *         description: Results submitted successfully
  */
-router.post("/submit/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), validateBody(submitResultSchema), ResultController.submitResults);
+router.post("/submit/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, validateBody(submitResultSchema), ResultController.submitResults);
 
 /**
  * @swagger
@@ -143,7 +141,7 @@ router.post("/submit/:classId/:termId", authMiddleware(["SchoolAdmin", "Teacher"
  *       200:
  *         description: Results status updated successfully
  */
-router.post("/approve/:classId/:termId", authMiddleware(["SchoolAdmin"]), validateBody(approveResultSchema), ResultController.approveResults);
+router.post("/approve/:classId/:termId", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(approveResultSchema), ResultController.approveResults);
 
 /**
  * @swagger
@@ -176,7 +174,7 @@ router.post("/approve/:classId/:termId", authMiddleware(["SchoolAdmin"]), valida
  *       200:
  *         description: Results published successfully
  */
-router.post("/publish/:classId/:termId", authMiddleware(["SchoolAdmin"]), ResultController.publishResults);
+router.post("/publish/:classId/:termId", authMiddleware(["SchoolAdmin"]), requireSchoolId, ResultController.publishResults);
 
 /**
  * @swagger
@@ -209,7 +207,7 @@ router.post("/publish/:classId/:termId", authMiddleware(["SchoolAdmin"]), Result
  *       200:
  *         description: Class results retrieved successfully
  */
-router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), ResultController.getClassResults);
+router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.getClassResults);
 
 /**
  * @swagger
@@ -242,7 +240,7 @@ router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin", "Teach
  *       200:
  *         description: Student results retrieved successfully
  */
-router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), ResultController.getStudentResult);
+router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.getStudentResult);
 
 /**
  * @swagger
@@ -269,6 +267,6 @@ router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin", "T
  *       200:
  *         description: My results retrieved successfully
  */
-router.get("/my/term/:termId", authMiddleware(["Student"]), ResultController.checkMyResult);
+router.get("/my/term/:termId", authMiddleware(["Student"]), requireSchoolId, ResultController.checkMyResult);
 
 export default router;

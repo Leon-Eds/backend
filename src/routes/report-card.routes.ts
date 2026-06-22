@@ -5,8 +5,6 @@ import { requireSchoolId } from "../middlewares/tenant.middleware";
 
 const router = Router();
 
-router.use(requireSchoolId);
-
 /**
  * @swagger
  * tags:
@@ -45,7 +43,7 @@ router.use(requireSchoolId);
  *       200:
  *         description: Report card JSON data retrieved successfully
  */
-router.get("/:studentId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), ReportCardController.getReportCard);
+router.get("/:studentId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ReportCardController.getReportCard);
 
 /**
  * @swagger
@@ -78,7 +76,7 @@ router.get("/:studentId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), Re
  *       200:
  *         description: Report card PDF generated and downloaded successfully
  */
-router.get("/:studentId/:termId/pdf", authMiddleware(["SchoolAdmin", "Teacher"]), ReportCardController.downloadReportCardPdf);
+router.get("/:studentId/:termId/pdf", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ReportCardController.downloadReportCardPdf);
 
 /**
  * @swagger
@@ -105,6 +103,6 @@ router.get("/:studentId/:termId/pdf", authMiddleware(["SchoolAdmin", "Teacher"])
  *       200:
  *         description: Student's own report card PDF downloaded successfully
  */
-router.get("/my/:termId/pdf", authMiddleware(["Student"]), ReportCardController.downloadMyReportCard);
+router.get("/my/:termId/pdf", authMiddleware(["Student"]), requireSchoolId, ReportCardController.downloadMyReportCard);
 
 export default router;

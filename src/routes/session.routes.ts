@@ -7,9 +7,6 @@ import { createSessionSchema, createTermSchema, updateSessionSchema, updateTermS
 
 const router = Router();
 
-// School context required for all routes
-router.use(requireSchoolId);
-
 // Auth helpers
 const allRoles = authMiddleware(["SuperAdmin", "SchoolAdmin", "Teacher", "Student"]);
 const adminOnly = authMiddleware(["SuperAdmin", "SchoolAdmin"]);
@@ -40,7 +37,7 @@ const adminOnly = authMiddleware(["SuperAdmin", "SchoolAdmin"]);
  *       200:
  *         description: List of academic sessions retrieved successfully
  */
-router.get("/", allRoles, AcademicSessionController.getAll);
+router.get("/", allRoles, requireSchoolId, AcademicSessionController.getAll);
 
 /**
  * @swagger
@@ -80,7 +77,7 @@ router.get("/", allRoles, AcademicSessionController.getAll);
  *       201:
  *         description: Academic session created successfully
  */
-router.post("/", adminOnly, validateBody(createSessionSchema), AcademicSessionController.createSession);
+router.post("/", adminOnly, requireSchoolId, validateBody(createSessionSchema), AcademicSessionController.createSession);
 
 /**
  * @swagger
@@ -109,7 +106,7 @@ router.post("/", adminOnly, validateBody(createSessionSchema), AcademicSessionCo
  *       404:
  *         description: Session not found
  */
-router.put("/:id/current", adminOnly, AcademicSessionController.setCurrentSession);
+router.put("/:id/current", adminOnly, requireSchoolId, AcademicSessionController.setCurrentSession);
 
 /**
  * @swagger
@@ -156,7 +153,7 @@ router.put("/:id/current", adminOnly, AcademicSessionController.setCurrentSessio
  *       201:
  *         description: Term added successfully
  */
-router.post("/:id/terms", adminOnly, validateBody(createTermSchema), AcademicSessionController.createTerm);
+router.post("/:id/terms", adminOnly, requireSchoolId, validateBody(createTermSchema), AcademicSessionController.createTerm);
 
 /**
  * @swagger
@@ -185,7 +182,7 @@ router.post("/:id/terms", adminOnly, validateBody(createTermSchema), AcademicSes
  *       404:
  *         description: Term not found
  */
-router.put("/terms/:termId/current", adminOnly, AcademicSessionController.setCurrentTerm);
+router.put("/terms/:termId/current", adminOnly, requireSchoolId, AcademicSessionController.setCurrentTerm);
 
 /**
  * @swagger
@@ -227,7 +224,7 @@ router.put("/terms/:termId/current", adminOnly, AcademicSessionController.setCur
  *       200:
  *         description: Session updated successfully
  */
-router.put("/:id", adminOnly, validateBody(updateSessionSchema), AcademicSessionController.updateSession);
+router.put("/:id", adminOnly, requireSchoolId, validateBody(updateSessionSchema), AcademicSessionController.updateSession);
 
 /**
  * @swagger
@@ -254,7 +251,7 @@ router.put("/:id", adminOnly, validateBody(updateSessionSchema), AcademicSession
  *       200:
  *         description: Session deleted successfully
  */
-router.delete("/:id", adminOnly, AcademicSessionController.deleteSession);
+router.delete("/:id", adminOnly, requireSchoolId, AcademicSessionController.deleteSession);
 
 /**
  * @swagger
@@ -297,7 +294,7 @@ router.delete("/:id", adminOnly, AcademicSessionController.deleteSession);
  *       200:
  *         description: Term updated successfully
  */
-router.put("/terms/:termId", adminOnly, validateBody(updateTermSchema), AcademicSessionController.updateTerm);
+router.put("/terms/:termId", adminOnly, requireSchoolId, validateBody(updateTermSchema), AcademicSessionController.updateTerm);
 
 /**
  * @swagger
@@ -324,6 +321,6 @@ router.put("/terms/:termId", adminOnly, validateBody(updateTermSchema), Academic
  *       200:
  *         description: Term deleted successfully
  */
-router.delete("/terms/:termId", adminOnly, AcademicSessionController.deleteTerm);
+router.delete("/terms/:termId", adminOnly, requireSchoolId, AcademicSessionController.deleteTerm);
 
 export default router;
