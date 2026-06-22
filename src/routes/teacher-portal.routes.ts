@@ -108,4 +108,93 @@ router.get("/subjects", TeacherPortalController.getMySubjects);
  */
 router.get("/classes/:classId/students", TeacherPortalController.getMyClassStudents);
 
+/**
+ * @swagger
+ * /api/teacher-portal/score-progress:
+ *   get:
+ *     summary: Get score entry progress for a class + subject + term
+ *     description: >
+ *       Returns the percentage of CA1, CA2, and Exam scores recorded for a specific
+ *       class, subject, and term. Helps the teacher track how much score entry they
+ *       have completed. Only accessible if the teacher is assigned to the class+subject.
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *       - in: query
+ *         name: classId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The class ID
+ *       - in: query
+ *         name: subjectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The subject ID
+ *       - in: query
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The term ID
+ *     responses:
+ *       200:
+ *         description: Score entry progress with CA1, CA2, and Exam percentages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     classId:
+ *                       type: string
+ *                     className:
+ *                       type: string
+ *                     subjectId:
+ *                       type: string
+ *                     subjectName:
+ *                       type: string
+ *                     termId:
+ *                       type: string
+ *                     totalStudents:
+ *                       type: integer
+ *                       description: Total active students in the class
+ *                     ca1Entered:
+ *                       type: integer
+ *                       description: Number of students with CA1 scores entered
+ *                     ca2Entered:
+ *                       type: integer
+ *                       description: Number of students with CA2 scores entered
+ *                     examEntered:
+ *                       type: integer
+ *                       description: Number of students with Exam scores entered
+ *                     ca1Progress:
+ *                       type: integer
+ *                       description: CA1 entry progress percentage (0-100)
+ *                     ca2Progress:
+ *                       type: integer
+ *                       description: CA2 entry progress percentage (0-100)
+ *                     examProgress:
+ *                       type: integer
+ *                       description: Exam entry progress percentage (0-100)
+ *       400:
+ *         description: Missing required query params or teacher not assigned
+ */
+router.get("/score-progress", TeacherPortalController.getScoreProgress);
+
 export default router;

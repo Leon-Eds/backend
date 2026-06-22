@@ -230,4 +230,98 @@ export class TeacherPortalService {
 
     return { allowed: true, teacherId: teacher.id };
   }
+
+  /**
+   * GET /api/teacher-portal/score-progress
+   * Returns the percentage of CA1, CA2, and Exam scores recorded
+   * for a specific class + subject + term by the authenticated teacher.
+   */
+  static async getScoreProgress(
+    schoolId: string,
+    userId: string,
+    classId: string,
+    subjectId: string,
+    termId: string
+  ) {
+    const teacher = await this.resolveTeacher(schoolId, userId);
+    if (!teacher) return failResponse("Teacher profile not found.");
+
+    // Verify the teacher is assigned to this class + subject
+    const assignment = await prisma.teacherSubjectAssignment.findFirst({
+      where: { teacherId: teacher.id, classId, subjectId },
+    });
+
+    if (!assignment) {
+      return failResponse("You are not assigned to teach this subject in this class.");
+    }
+
+    // Get total active students in the class
+    const totalStudents = await prisma.student.count({
+      where: { schoolId, classId, status: "Active" },
+    });
+
+    if (totalStudents === 0) {
+      return successResponse({
+        classId,
+        subjectId,
+        termId,
+        totalStudents: 0,
+        ca1Entered: 0,
+        ca2Entered: 0,
+        examEntered: 0,
+        ca1Progress: 0,
+        ca2Progress: 0,
+        examProgress: 0,
+      }, "No active students in this class.");
+    }
+
+    // Get all score records for this class + subject + term
+    const scores = await prisma.score.findMany({
+      where: { schoolId, classId, subjectId, termId },
+      select: {
+        studentId: true,
+        firstCA: true,
+        secondCA: true,
+        exam: true,
+      },
+    });
+
+    // Count students who have each component entered (score record exists with value > 0)
+    // A score record existing at all means the teacher has interacted with it,
+    // but we check > 0 to distinguish "entered" from "placeholder/not yet graded"
+    let ca1Entered = 0;
+    let ca2Entered = 0;
+    let examEntered = 0;
+
+    for (const s of scores) {
+      if (Number(s.firstCA) > 0) ca1Entered++;
+      if (Number(s.secondCA) > 0) ca2Entered++;
+      if (Number(s.exam) > 0) examEntered++;
+    }
+
+    const ca1Progress = Math.round((ca1Entered / totalStudents) * 100);
+    const ca2Progress = Math.round((ca2Entered / totalStudents) * 100);
+    const examProgress = Math.round((examEntered / totalStudents) * 100);
+
+    // Fetch class and subject names for context
+    const [classEntity, subject] = await Promise.all([
+      prisma.class.findFirst({ where: { id: classId, schoolId } }),
+      prisma.subject.findFirst({ where: { id: subjectId, schoolId } }),
+    ]);
+
+    return successResponse({
+      classId,
+      className: classEntity ? `${classEntity.name} ${classEntity.arm}`.trim() : "",
+      subjectId,
+      subjectName: subject?.name || "",
+      termId,
+      totalStudents,
+      ca1Entered,
+      ca2Entered,
+      examEntered,
+      ca1Progress,
+      ca2Progress,
+      examProgress,
+    }, "Score entry progress retrieved.");
+  }
 }

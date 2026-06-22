@@ -47,4 +47,23 @@ export class TeacherPortalController {
       next(error);
     }
   }
+
+  static async getScoreProgress(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const classId = String(req.query.classId || "");
+      const subjectId = String(req.query.subjectId || "");
+      const termId = String(req.query.termId || "");
+
+      if (!classId || !subjectId || !termId) {
+        return res.status(400).json({ success: false, message: "classId, subjectId, and termId are required." });
+      }
+
+      const result = await TeacherPortalService.getScoreProgress(schoolId, userId, classId, subjectId, termId);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
