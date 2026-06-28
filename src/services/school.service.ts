@@ -13,6 +13,7 @@ export class SchoolService {
       contactEmail: school.contactEmail,
       contactPhone: school.contactPhone,
       logoUrl: school.logoUrl,
+      schoolTheme: school.schoolTheme,
       slug: school.slug,
       subscriptionPlan: school.plan?.name || "Free",
       subscriptionStatus: school.subscriptionStatus,
@@ -97,6 +98,7 @@ export class SchoolService {
         contactEmail: request.contactEmail !== undefined ? request.contactEmail : undefined,
         contactPhone: request.contactPhone !== undefined ? request.contactPhone : undefined,
         logoUrl: request.logoUrl !== undefined ? request.logoUrl : undefined,
+        schoolTheme: request.schoolTheme !== undefined ? request.schoolTheme : undefined,
       },
       include: {
         teachers: { select: { isActive: true } },

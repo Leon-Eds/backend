@@ -99,6 +99,21 @@ router.get("/:id", authMiddleware(), SchoolController.getById);
  *                 type: string
  *               logoUrl:
  *                 type: string
+ *               schoolTheme:
+ *                 type: object
+ *                 properties:
+ *                   primaryColor:
+ *                     type: string
+ *                     example: "#1a1a2e"
+ *                   secondaryColor:
+ *                     type: string
+ *                     example: "#16213e"
+ *                   accentColor:
+ *                     type: string
+ *                     example: "#0f3460"
+ *                   font:
+ *                     type: string
+ *                     example: "Inter"
  *     responses:
  *       200:
  *         description: School profile updated successfully

@@ -85,6 +85,7 @@ model School {
   city               String?            @db.VarChar(100)
   state              String?            @db.VarChar(100)
   country            String?            @db.VarChar(100)
+  schoolTheme        Json?              /// JSON object for school branding: { primaryColor, secondaryColor, accentColor, font }
   studentCount       Int?
   slug               String             @unique @db.VarChar(200)
   subscriptionPlan   SubscriptionPlan   @default(Free)
