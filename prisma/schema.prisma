@@ -113,6 +113,7 @@ model School {
   announcements    Announcement[]
   attendances      Attendance[]
   parents          Parent[]
+  subscriptionPayments SubscriptionPaymentLog[]
 }
 
 model User {
@@ -464,7 +465,29 @@ model PaymentPlan {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime?    @updatedAt
 
-  schools          School[]
+  schools               School[]
+  subscriptionPayments  SubscriptionPaymentLog[]
 }
 
+enum SubscriptionPaymentSource {
+  Paystack
+  Manual
+}
 
+model SubscriptionPaymentLog {
+  id            String                    @id @default(uuid()) @db.Uuid
+  schoolId      String                    @db.Uuid
+  planId        String                    @db.Uuid
+  amount        Decimal                   @db.Decimal(12, 2)
+  source        SubscriptionPaymentSource
+  reference     String?                   @db.VarChar(200)
+  durationDays  Int
+  paidAt        DateTime                  @default(now())
+
+  school        School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  plan          PaymentPlan               @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([planId])
+  @@index([paidAt])
+}

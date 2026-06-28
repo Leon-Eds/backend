@@ -2,6 +2,7 @@ import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
 import { paystack } from "../utils/paystack";
 import { emailService } from "../utils/email";
+import { SubscriptionLogService } from "./subscriptionLog.service";
 
 export class PaymentService {
   /**
@@ -160,6 +161,17 @@ export class PaymentService {
         },
       });
 
+      // Log the payment
+      const durationDays = Math.round((endedAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+      await SubscriptionLogService.logPayment({
+        schoolId: school.id,
+        planId: plan.id,
+        amount: Number(plan.amount),
+        source: "Paystack",
+        reference: data.reference || null,
+        durationDays: durationDays > 0 ? durationDays : 30,
+      }).catch(err => console.error("[PaymentService] Error logging payment:", err));
+
       // Reactivate excess accounts
       await this.reactivateSchoolSuspendedAccounts(school.id, plan.maxTeachers, plan.maxStudents);
 
@@ -242,6 +254,16 @@ export class PaymentService {
         isActive: true,
       },
     });
+
+    // Log the payment
+    const durationDays = durationMonths * 30;
+    await SubscriptionLogService.logPayment({
+      schoolId: school.id,
+      planId: plan.id,
+      amount: Number(plan.amount),
+      source: "Manual",
+      durationDays,
+    }).catch(err => console.error("[PaymentService] Error logging manual payment:", err));
 
     // Reactivate suspended accounts
     await this.reactivateSchoolSuspendedAccounts(school.id, plan.maxTeachers, plan.maxStudents);

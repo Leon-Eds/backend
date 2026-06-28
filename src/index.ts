@@ -27,6 +27,7 @@ import teacherPortalRoutes from "./routes/teacher-portal.routes";
 import attendanceRoutes from "./routes/attendance.routes";
 import paymentPlanRoutes from "./routes/paymentPlan.routes";
 import paymentRoutes from "./routes/payment.routes";
+import subscriptionLogRoutes from "./routes/subscriptionLog.routes";
 
 dotenv.config();
 
@@ -150,6 +151,7 @@ app.use("/api/teacher-portal", teacherPortalRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payment-plans", paymentPlanRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/subscription-logs", subscriptionLogRoutes);
 
 // Error Handling Middleware (Must be registered last)
 app.use(errorMiddleware);
