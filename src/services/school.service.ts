@@ -137,7 +137,7 @@ export class SchoolService {
     return successResponse(this.mapToResponse(updatedSchool), "Subscription plan updated successfully.");
   }
 
-  static async updateSchoolStatus(schoolId: string, isActive: boolean) {
+  static async updateSchoolStatus(schoolId: string, isActive?: boolean) {
     const school = await prisma.school.findUnique({
       where: { id: schoolId },
     });
@@ -146,15 +146,17 @@ export class SchoolService {
       return failResponse("School not found.");
     }
 
+    const newActiveState = isActive !== undefined ? isActive : !school.isActive;
+
     await prisma.school.update({
       where: { id: schoolId },
       data: {
-        isActive,
-        subscriptionStatus: isActive ? "Active" : "Suspended",
+        isActive: newActiveState,
+        subscriptionStatus: newActiveState ? "Active" : "Suspended",
       },
     });
 
-    const message = isActive ? "School activated successfully." : "School suspended successfully.";
+    const message = newActiveState ? "School activated successfully." : "School suspended successfully.";
     return successResponse(true, message);
   }
 

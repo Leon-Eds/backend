@@ -62,7 +62,7 @@ export class SchoolController {
   static async updateStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const isActive = req.query.isActive === "true";
+      const isActive = req.query.isActive !== undefined ? req.query.isActive === "true" : undefined;
       const result = await SchoolService.updateSchoolStatus(id, isActive);
       if (result.success) {
         return res.status(200).json(result);
