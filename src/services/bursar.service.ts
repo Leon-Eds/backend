@@ -1,7 +1,62 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
+import { hashPassword } from "../utils/bcrypt";
+import { emailService } from "../utils/email";
 
 export class BursarService {
+
+  /**
+   * Create a new Bursar user
+   */
+  static async createBursar(schoolId: string, request: any) {
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+    });
+
+    if (!school) {
+      return failResponse("School not found.");
+    }
+
+    const emailInUse = await prisma.user.findUnique({
+      where: { email: request.email.toLowerCase() },
+    });
+
+    if (emailInUse) {
+      return failResponse("Email already in use.");
+    }
+
+    const hashedPassword = await hashPassword(request.password);
+
+    const user = await prisma.user.create({
+      data: {
+        schoolId,
+        name: request.fullName,
+        email: request.email.toLowerCase(),
+        passwordHash: hashedPassword,
+        role: "Bursar",
+        isActive: true,
+        isVerified: true,
+      },
+    });
+
+    // Send welcome email asynchronously
+    emailService.sendBursarWelcomeEmail(
+      user.email,
+      user.name,
+      school.name,
+      user.email,
+      request.password
+    ).catch((err) => console.error("[BursarService] Onboarding email error:", err));
+
+    return successResponse({
+      id: user.id,
+      fullName: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+    }, "Bursar created successfully.");
+  }
 
   /**
    * Get fee status for a single student in a term

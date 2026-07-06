@@ -3,6 +3,19 @@ import { AuthenticatedRequest } from "../types";
 import { BursarService } from "../services/bursar.service";
 
 export class BursarController {
+  static async createBursar(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const result = await BursarService.createBursar(schoolId, req.body);
+      if (result.success) {
+        return res.status(201).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getStudentFeeStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;

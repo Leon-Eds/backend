@@ -315,6 +315,50 @@ export const emailTemplates = {
   },
 
   /**
+   * 3b. Bursar Welcome/Credentials Email
+   */
+  getBursarWelcome(name: string, schoolName: string, systemEmail: string, passwordTemp: string): { subject: string; html: string } {
+    const subject = `Welcome to LeonEd Africa — Invitation from ${schoolName}`;
+    const html = wrapInShell(
+      subject,
+      `Welcome to the Finance Team! 💼`,
+      `
+      <h2>Bursar Account Credentials Created</h2>
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>You have been added as a Bursar at <strong>${schoolName}</strong> on the LeonEd Africa portal.</p>
+
+      <div class="alert-box">
+        ✓ Your bursar portal profile is set up. Use the credentials below to log in:
+      </div>
+
+      <div class="card">
+        <table>
+          <tr>
+            <td class="label">School:</td>
+            <td class="value">${schoolName}</td>
+          </tr>
+          <tr>
+            <td class="label">Login Email:</td>
+            <td class="value" style="font-family: monospace; font-size: 15px;"><strong>${systemEmail}</strong></td>
+          </tr>
+          <tr>
+            <td class="label">Password:</td>
+            <td class="value" style="font-family: monospace; font-size: 15px; color: #b45309;">${passwordTemp}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>For security reasons, we strongly recommend changing this temporary password immediately after your first login.</p>
+      
+      <div style="text-align: center;">
+        <a href="https://leoned.app/login" class="btn" target="_blank">Log In to Portal</a>
+      </div>
+      `
+    );
+    return { subject, html };
+  },
+
+  /**
    * 4. Student/Parent Onboarding Email
    */
   getStudentWelcome(

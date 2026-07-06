@@ -67,6 +67,14 @@ export const emailService = {
   },
 
   /**
+   * Send Bursar Invitation and Temporary Credentials
+   */
+  async sendBursarWelcomeEmail(to: string, name: string, schoolName: string, systemEmail: string, passwordTemp: string) {
+    const { subject, html } = emailTemplates.getBursarWelcome(name, schoolName, systemEmail, passwordTemp);
+    return sendMail(to, subject, html);
+  },
+
+  /**
    * Send Student/Parent Invitation and Credentials
    */
   async sendStudentWelcomeEmail(

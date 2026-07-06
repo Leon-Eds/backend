@@ -2,8 +2,56 @@ import { Router } from "express";
 import { BursarController } from "../controllers/bursar.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
+import { validateBody } from "../middlewares/validation.middleware";
+import { createBursarSchema } from "../validations/bursar.validation";
 
 const router = Router();
+
+/**
+ * @swagger
+ * /api/bursar:
+ *   post:
+ *     summary: Register a new bursar account (SchoolAdmin only)
+ *     tags: [Bursar]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *               - email
+ *               - password
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               profilePictureUrl:
+ *                 type: string
+ *                 description: URL of the bursar's profile picture
+ *     responses:
+ *       201:
+ *         description: Bursar created successfully
+ *       400:
+ *         description: Bad request or validation error
+ */
+router.post("/", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(createBursarSchema), BursarController.createBursar);
 
 // All bursar routes require Bursar or SchoolAdmin role + school context
 router.use(authMiddleware(["Bursar", "SchoolAdmin"]));
