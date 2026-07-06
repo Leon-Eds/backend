@@ -13,6 +13,7 @@ enum UserRole {
   SchoolAdmin
   Teacher
   Student
+  Bursar
 }
 
 enum SubscriptionPlan {
@@ -32,6 +33,7 @@ enum StudentStatus {
   Graduated
   Archived
   Suspended
+  Left
 }
 
 enum Gender {
@@ -72,6 +74,15 @@ enum AnnouncementAudience {
   Students
   Teachers
   Class
+}
+
+enum AnnouncementCategory {
+  GENERAL
+  HEALTH
+  EMERGENCY
+  REMINDERS
+  SUMMONS
+  ACADEMIC_NOTICE
 }
 
 model School {
@@ -343,6 +354,8 @@ model Score {
   total              Decimal  @db.Decimal(6, 2)
   grade              Grade
   remark             String   @default("") @db.VarChar(200)
+  subjectPosition    Int      @default(0)
+  isLocked           Boolean  @default(false)
   enteredByTeacherId String?  @db.Uuid
   createdAt          DateTime @default(now())
   updatedAt          DateTime? @updatedAt
@@ -368,6 +381,7 @@ model Result {
   academicSessionId String       @db.Uuid
   totalScore        Decimal      @db.Decimal(8, 2)
   average           Decimal      @db.Decimal(6, 2)
+  classAverage      Decimal      @default(0) @db.Decimal(6, 2)
   position          Int
   subjectCount      Int
   status            ResultStatus @default(Draft)
@@ -398,6 +412,8 @@ model FeePayment {
   amountDue         Decimal       @db.Decimal(12, 2)
   amountPaid        Decimal       @db.Decimal(12, 2)
   status            PaymentStatus @default(Pending)
+  receiptImageUrl   String        @default("") @db.VarChar(500)
+  description       String        @default("") @db.VarChar(500)
   clearedByUserId   String?       @db.Uuid
   clearedAt         DateTime?
   createdAt         DateTime      @default(now())
@@ -413,17 +429,18 @@ model FeePayment {
 }
 
 model Announcement {
-  id             String               @id @default(uuid()) @db.Uuid
-  schoolId       String               @db.Uuid
-  createdByUserId String              @db.Uuid
-  title          String               @db.VarChar(300)
-  content        String               @db.Text
-  audience       AnnouncementAudience @default(All)
-  targetClassId  String?              @db.Uuid
-  createdAt      DateTime             @default(now())
+  id             String                @id @default(uuid()) @db.Uuid
+  schoolId       String                @db.Uuid
+  createdByUserId String               @db.Uuid
+  title          String                @db.VarChar(300)
+  content        String                @db.Text
+  audience       AnnouncementAudience  @default(All)
+  category       AnnouncementCategory  @default(GENERAL)
+  targetClassId  String?               @db.Uuid
+  createdAt      DateTime              @default(now())
 
-  school         School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  createdByUser  User                 @relation("UserToAnnouncement", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  school         School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  createdByUser  User                  @relation("UserToAnnouncement", fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
 }

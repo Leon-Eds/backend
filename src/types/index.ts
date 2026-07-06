@@ -4,7 +4,7 @@ export interface UserPayload {
   id: string;
   email: string;
   name: string;
-  role: "SuperAdmin" | "SchoolAdmin" | "Teacher" | "Student";
+  role: "SuperAdmin" | "SchoolAdmin" | "Teacher" | "Student" | "Bursar";
   schoolId?: string;
   isVerified: boolean;
 }

@@ -54,14 +54,28 @@ export class AuthController {
   static async changePassword(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      if (!userId) {
+      const userRole = req.user?.role;
+      if (!userId || !userRole) {
         return res.status(401).json({ success: false, message: "Unauthorized context" });
       }
-      const result = await AuthService.changePassword(userId, req.body);
+      const result = await AuthService.changePassword(userId, userRole, req.body);
       if (result.success) {
         return res.status(200).json(result);
       }
       return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async logout(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized context" });
+      }
+      const result = await AuthService.logout(userId);
+      return res.status(200).json(result);
     } catch (error) {
       next(error);
     }

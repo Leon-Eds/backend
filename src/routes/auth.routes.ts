@@ -198,6 +198,22 @@ router.post("/change-password", authMiddleware(), validateBody(changePasswordSch
 
 /**
  * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout and invalidate refresh token
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/logout", authMiddleware(), AuthController.logout);
+
+/**
+ * @swagger
  * /api/auth/forgot-password:
  *   post:
  *     summary: Request a password reset link

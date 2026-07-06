@@ -176,4 +176,37 @@ export class SchoolService {
       } teachers and ${p.maxStudents >= 999999 ? "unlimited" : p.maxStudents} students.`,
     }));
   }
+
+  static async resetSchoolAdminPassword(schoolId: string, newPassword: string) {
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+    });
+
+    if (!school) {
+      return failResponse("School not found.");
+    }
+
+    const admin = await prisma.user.findFirst({
+      where: { schoolId, role: "SchoolAdmin" },
+    });
+
+    if (!admin) {
+      return failResponse("No SchoolAdmin found for this school.");
+    }
+
+    const { hashPassword } = await import("../utils/bcrypt");
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: admin.id },
+      data: { passwordHash: hashedPassword },
+    });
+
+    return successResponse({
+      schoolId,
+      schoolName: school.name,
+      adminEmail: admin.email,
+      adminName: admin.name,
+    }, "School admin password has been reset successfully.");
+  }
 }

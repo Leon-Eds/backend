@@ -78,4 +78,19 @@ export class StudentController {
       next(error);
     }
   }
+
+  static async resetPassword(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+      const { newPassword } = req.body;
+      if (!newPassword || newPassword.trim().length < 6) {
+        return res.status(400).json({ success: false, message: "New password must be at least 6 characters." });
+      }
+      const result = await StudentService.resetStudentPassword(schoolId, id, newPassword.trim());
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

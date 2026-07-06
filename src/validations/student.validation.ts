@@ -28,7 +28,7 @@ export const updateStudentSchema = z.object({
   parentEmail: z.string().max(200).optional(),
   parentPassportUrl: z.string().max(500).optional(),
   parentIdNumber: z.string().max(100).optional(),
-  status: z.enum(["Active", "Graduated", "Archived", "Suspended"]).optional(),
+  status: z.enum(["Active", "Graduated", "Archived", "Suspended", "Left"]).optional(),
   arm: z.string().max(50).optional().nullable(),
   bloodGroup: z.string().max(20).optional().nullable(),
 });

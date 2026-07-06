@@ -262,7 +262,12 @@ export class AuthService {
     return successResponse(responseData);
   }
 
-  static async changePassword(userId: string, request: any) {
+  static async changePassword(userId: string, userRole: string, request: any) {
+    // Students are not allowed to change their passwords
+    if (userRole === "Student") {
+      return failResponse("Students are not permitted to change their password. Contact your school administrator.");
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -283,6 +288,18 @@ export class AuthService {
     });
 
     return successResponse(true, "Password changed successfully.");
+  }
+
+  static async logout(userId: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        refreshToken: null,
+        refreshTokenExpiry: null,
+      },
+    });
+
+    return successResponse(true, "Logged out successfully.");
   }
 
   static async forgotPassword(request: any) {

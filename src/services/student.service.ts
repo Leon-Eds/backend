@@ -443,4 +443,32 @@ export class StudentService {
     const items = students.map((s) => this.mapToResponse(s));
     return successResponse(items);
   }
+
+  static async resetStudentPassword(schoolId: string, studentId: string, newPassword: string) {
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, schoolId },
+      include: { user: true },
+    });
+
+    if (!student) {
+      return failResponse("Student not found.");
+    }
+
+    if (!student.userId) {
+      return failResponse("Student does not have an associated user account.");
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: student.userId },
+      data: { passwordHash: hashedPassword },
+    });
+
+    return successResponse({
+      studentId: student.id,
+      admissionNumber: student.admissionNumber,
+      fullName: student.fullName,
+    }, "Student password has been reset successfully.");
+  }
 }

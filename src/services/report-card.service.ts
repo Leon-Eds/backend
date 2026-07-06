@@ -58,11 +58,13 @@ export class ReportCardService {
       term: result.term.termNumber,
       totalScore: Number(result.totalScore),
       average: Number(result.average),
+      classAverage: Number(result.classAverage),
       position: result.position,
       totalStudentsInClass: totalInClass,
       subjectCount: result.subjectCount,
       teacherComment: result.teacherComment,
       adminComment: result.adminComment,
+      studentPictureUrl: result.student.profilePictureUrl || "",
       subjectScores: scores.map((s) => ({
         id: s.id,
         studentId: s.studentId,
@@ -76,6 +78,7 @@ export class ReportCardService {
         total: Number(s.total),
         grade: s.grade,
         remark: s.remark,
+        subjectPosition: s.subjectPosition || 0,
       })),
       gradingKey: (gradingRulesResult.data || []).map((g: any) => ({
         grade: g.grade,
@@ -115,45 +118,65 @@ export class ReportCardService {
     const textGrey = "#6b7280";
 
     // 1. Header Section
-    doc.fillColor(darkBlue).fontSize(20).text(data.schoolName, { align: "center", bold: true } as any);
-    doc.fillColor(textGrey).fontSize(9).text(data.schoolAddress, { align: "center" });
-    doc.text(`Email: {data.schoolEmail} | Phone: {data.schoolPhone}`.replace("{data.schoolEmail}", data.schoolEmail).replace("{data.schoolPhone}", data.schoolPhone), { align: "center" });
+    // Draw left-aligned school header with a space on the right for logo
+    doc.fillColor(darkBlue).fontSize(20).text(data.schoolName, 30, 40, { width: 420, bold: true } as any);
+    doc.fillColor(textGrey).fontSize(9).text(data.schoolAddress, 30, 65, { width: 420 });
+    doc.text(`Email: ${data.schoolEmail} | Phone: ${data.schoolPhone}`, 30, 80, { width: 420 });
+
+    // Draw School Logo / Placeholder
+    const logoX = 485;
+    const logoY = 35;
+    const logoSize = 65;
     
+    // Draw aesthetic placeholder frame
+    doc.rect(logoX, logoY, logoSize, logoSize).lineWidth(1.5).strokeColor(darkBlue).stroke();
+    doc.fillColor(lightBlue).rect(logoX + 1, logoY + 1, logoSize - 2, logoSize - 2).fill();
+    doc.fillColor(darkBlue).fontSize(10).text("LOGO", logoX, logoY + 26, { width: logoSize, align: "center", bold: true } as any);
+
     // Draw thick horizontal line
-    doc.moveTo(30, 90).lineTo(565, 90).lineWidth(2).strokeColor(darkBlue).stroke();
+    doc.moveTo(30, 115).lineTo(565, 115).lineWidth(2).strokeColor(darkBlue).stroke();
 
     // 2. Report Card Title
     doc.moveDown(1.5);
-    doc.fillColor(darkBlue).fontSize(14).text("STUDENT REPORT CARD", { align: "center", bold: true } as any);
-    doc.moveDown(0.5);
+    doc.fillColor(darkBlue).fontSize(14).text("STUDENT REPORT CARD", 30, 125, { align: "center", bold: true } as any);
 
-    // 3. Student Details Box
-    const boxStartY = 135;
-    const boxHeight = 65;
+    // 3. Student Details Box with Photo on the left, details on right
+    const boxStartY = 150;
+    const boxHeight = 80;
     doc.rect(30, boxStartY, 535, boxHeight).lineWidth(1).strokeColor(lightGrey).stroke();
 
-    // Left Column Info
+    // Student photo frame
+    const photoX = 40;
+    const photoY = boxStartY + 10;
+    const photoWidth = 60;
+    const photoHeight = 60;
+    doc.rect(photoX, photoY, photoWidth, photoHeight).lineWidth(1).strokeColor(lightGrey).stroke();
+    doc.fillColor("#f3f4f6").rect(photoX + 1, photoY + 1, photoWidth - 2, photoHeight - 2).fill();
+    doc.fillColor(textGrey).fontSize(8).text("PHOTO", photoX, photoY + 26, { width: photoWidth, align: "center" });
+
+    // Left Column Info (shifted to accommodate photo)
     doc.fillColor(darkGrey).fontSize(9);
-    doc.text("Name:", 40, boxStartY + 10, { bold: true } as any).text(data.studentName, 120, boxStartY + 10);
-    doc.text("Class:", 40, boxStartY + 28, { bold: true } as any).text(data.className, 120, boxStartY + 28);
-    doc.text("Academic Session:", 40, boxStartY + 46, { bold: true } as any).text(data.academicSession, 130, boxStartY + 46);
+    doc.text("Name:", 120, boxStartY + 15, { bold: true } as any).text(data.studentName, 175, boxStartY + 15);
+    doc.text("Class:", 120, boxStartY + 33, { bold: true } as any).text(data.className, 175, boxStartY + 33);
+    doc.text("Session:", 120, boxStartY + 51, { bold: true } as any).text(data.academicSession, 175, boxStartY + 51);
 
     // Right Column Info
-    doc.text("Admission No:", 300, boxStartY + 10, { bold: true } as any).text(data.admissionNumber, 380, boxStartY + 10);
-    doc.text("Gender:", 300, boxStartY + 28, { bold: true } as any).text(data.gender, 380, boxStartY + 28);
-    doc.text("Term:", 300, boxStartY + 46, { bold: true } as any).text(data.term, 380, boxStartY + 46);
+    doc.text("Admission No:", 340, boxStartY + 15, { bold: true } as any).text(data.admissionNumber, 430, boxStartY + 15);
+    doc.text("Gender:", 340, boxStartY + 33, { bold: true } as any).text(data.gender, 430, boxStartY + 33);
+    doc.text("Term:", 340, boxStartY + 51, { bold: true } as any).text(data.term, 430, boxStartY + 51);
 
     // 4. Scores Table
-    const tableStartY = 215;
+    const tableStartY = 245;
     const colWidths = {
       sn: 25,
-      subject: 160,
-      ca1: 50,
-      ca2: 50,
-      exam: 55,
-      total: 60,
-      grade: 50,
-      remark: 85,
+      subject: 150,
+      ca1: 45,
+      ca2: 45,
+      exam: 50,
+      total: 55,
+      grade: 45,
+      position: 60,
+      remark: 60,
     };
 
     const colPositions = {
@@ -164,7 +187,8 @@ export class ReportCardService {
       exam: 30 + colWidths.sn + colWidths.subject + colWidths.ca1 + colWidths.ca2,
       total: 30 + colWidths.sn + colWidths.subject + colWidths.ca1 + colWidths.ca2 + colWidths.exam,
       grade: 30 + colWidths.sn + colWidths.subject + colWidths.ca1 + colWidths.ca2 + colWidths.exam + colWidths.total,
-      remark: 30 + colWidths.sn + colWidths.subject + colWidths.ca1 + colWidths.ca2 + colWidths.exam + colWidths.total + colWidths.grade,
+      position: 30 + colWidths.sn + colWidths.subject + colWidths.ca1 + colWidths.ca2 + colWidths.exam + colWidths.total + colWidths.grade,
+      remark: 30 + colWidths.sn + colWidths.subject + colWidths.ca1 + colWidths.ca2 + colWidths.exam + colWidths.total + colWidths.grade + colWidths.position,
     };
 
     // Draw Table Header Background
@@ -172,15 +196,16 @@ export class ReportCardService {
     doc.rect(30, tableStartY, 535, headerHeight).fillColor(darkBlue).fill();
 
     // Table Header Text
-    doc.fillColor("#ffffff").fontSize(8.5);
-    doc.text("S/N", colPositions.sn + 3, tableStartY + 6, { width: colWidths.sn - 6, align: "left" });
+    doc.fillColor("#ffffff").fontSize(8);
+    doc.text("S/N", colPositions.sn + 2, tableStartY + 6, { width: colWidths.sn - 4, align: "left" });
     doc.text("Subject", colPositions.subject + 5, tableStartY + 6, { width: colWidths.subject - 10, align: "left" });
     doc.text("CA1 (20)", colPositions.ca1, tableStartY + 6, { width: colWidths.ca1, align: "center" });
     doc.text("CA2 (20)", colPositions.ca2, tableStartY + 6, { width: colWidths.ca2, align: "center" });
     doc.text("Exam (60)", colPositions.exam, tableStartY + 6, { width: colWidths.exam, align: "center" });
     doc.text("Total (100)", colPositions.total, tableStartY + 6, { width: colWidths.total, align: "center" });
     doc.text("Grade", colPositions.grade, tableStartY + 6, { width: colWidths.grade, align: "center" });
-    doc.text("Remark", colPositions.remark + 5, tableStartY + 6, { width: colWidths.remark - 10, align: "left" });
+    doc.text("Position", colPositions.position, tableStartY + 6, { width: colWidths.position, align: "center" });
+    doc.text("Remark", colPositions.remark + 2, tableStartY + 6, { width: colWidths.remark - 4, align: "left" });
 
     let currentY = tableStartY + headerHeight;
     const rowHeight = 20;
@@ -196,31 +221,34 @@ export class ReportCardService {
       doc.moveTo(30, currentY + rowHeight).lineTo(565, currentY + rowHeight).lineWidth(0.5).strokeColor(lightGrey).stroke();
 
       // Row Text
-      doc.fillColor(darkGrey).fontSize(8.5);
-      doc.text((index + 1).toString(), colPositions.sn + 3, currentY + 5, { width: colWidths.sn - 6, align: "left" });
+      doc.fillColor(darkGrey).fontSize(8);
+      doc.text((index + 1).toString(), colPositions.sn + 2, currentY + 5, { width: colWidths.sn - 4, align: "left" });
       doc.text(score.subjectName, colPositions.subject + 5, currentY + 5, { width: colWidths.subject - 10, align: "left" });
       doc.text(score.firstCA.toFixed(1), colPositions.ca1, currentY + 5, { width: colWidths.ca1, align: "center" });
       doc.text(score.secondCA.toFixed(1), colPositions.ca2, currentY + 5, { width: colWidths.ca2, align: "center" });
       doc.text(score.exam.toFixed(1), colPositions.exam, currentY + 5, { width: colWidths.exam, align: "center" });
       doc.text(score.total.toFixed(1), colPositions.total, currentY + 5, { width: colWidths.total, align: "center", bold: true } as any);
       doc.text(score.grade, colPositions.grade, currentY + 5, { width: colWidths.grade, align: "center", bold: true } as any);
-      doc.text(score.remark, colPositions.remark + 5, currentY + 5, { width: colWidths.remark - 10, align: "left" });
+      doc.text(this.getOrdinalSuffix(score.subjectPosition), colPositions.position, currentY + 5, { width: colWidths.position, align: "center" });
+      doc.text(score.remark, colPositions.remark + 2, currentY + 5, { width: colWidths.remark - 4, align: "left" });
 
       currentY += rowHeight;
     });
 
-    // 5. Result Summary Box
+    // 5. Result Summary Box (Updated: includes student average, class average, class position)
     currentY += 12;
     doc.rect(30, currentY, 535, 45).fillColor(lightBlue).fill();
     doc.rect(30, currentY, 535, 45).lineWidth(1).strokeColor(borderBlue).stroke();
 
     doc.fillColor(darkBlue).fontSize(9);
     doc.text("Total Score:", 45, currentY + 10, { bold: true } as any).text(data.totalScore.toFixed(1), 120, currentY + 10);
-    doc.text("Average:", 45, currentY + 26, { bold: true } as any).text(data.average.toFixed(2), 120, currentY + 26);
+    doc.text("Average:", 45, currentY + 26, { bold: true } as any).text(`${data.average.toFixed(2)}%`, 120, currentY + 26);
 
     const ordinalPos = this.getOrdinalSuffix(data.position);
-    doc.text("Position:", 280, currentY + 10, { bold: true } as any).text(`${ordinalPos} out of ${data.totalStudentsInClass} students`, 350, currentY + 10);
-    doc.text("Subjects:", 280, currentY + 26, { bold: true } as any).text(data.subjectCount.toString(), 350, currentY + 26);
+    doc.text("Class Position:", 230, currentY + 10, { bold: true } as any).text(`${ordinalPos} of ${data.totalStudentsInClass}`, 310, currentY + 10);
+    doc.text("Class Average:", 230, currentY + 26, { bold: true } as any).text(`${data.classAverage.toFixed(2)}%`, 310, currentY + 26);
+
+    doc.text("Subjects:", 440, currentY + 10, { bold: true } as any).text(data.subjectCount.toString(), 495, currentY + 10);
 
     currentY += 45 + 12;
 
@@ -253,7 +281,6 @@ export class ReportCardService {
 
       // Draw Grading Key Table Header
       const keyHeaderHeight = 15;
-      const keyColWidths = { grade: 60, range: 100, remark: 100 };
       const keyColPositions = {
         grade: 30,
         range: 90,

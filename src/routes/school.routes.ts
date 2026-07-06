@@ -180,4 +180,42 @@ router.put("/:id/plan", authMiddleware(["SuperAdmin"]), validateBody(updateSchoo
  */
 router.put("/:id/status", authMiddleware(["SuperAdmin"]), SchoolController.updateStatus);
 
+/**
+ * @swagger
+ * /api/school/{id}/reset-admin-password:
+ *   put:
+ *     summary: Reset a school admin's password (SuperAdmin only)
+ *     tags: [Schools]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: The new password for the school admin
+ *     responses:
+ *       200:
+ *         description: School admin password reset successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: School not found
+ */
+router.put("/:id/reset-admin-password", authMiddleware(["SuperAdmin"]), SchoolController.resetAdminPassword);
+
 export default router;

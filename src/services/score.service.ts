@@ -18,7 +18,31 @@ export class ScoreService {
       total: Number(s.total),
       grade: s.grade,
       remark: s.remark,
+      subjectPosition: s.subjectPosition || 0,
     };
+  }
+
+  /**
+   * Compute and update subject positions (rank by total descending) for all scores in a class+subject+term
+   */
+  private static async computeSubjectPositions(schoolId: string, classId: string, subjectId: string, termId: string) {
+    const scores = await prisma.score.findMany({
+      where: { schoolId, classId, subjectId, termId },
+      orderBy: { total: "desc" },
+    });
+
+    let position = 0;
+    let lastTotal = -1;
+    for (let i = 0; i < scores.length; i++) {
+      if (Number(scores[i].total) !== lastTotal) {
+        position = i + 1;
+        lastTotal = Number(scores[i].total);
+      }
+      await prisma.score.update({
+        where: { id: scores[i].id },
+        data: { subjectPosition: position },
+      });
+    }
   }
 
   static async enterScore(
@@ -58,6 +82,19 @@ export class ScoreService {
       return failResponse("Subject not found in this school.");
     }
 
+    // Check if scores are locked (result already submitted/approved/published)
+    const existingResult = await prisma.result.findFirst({
+      where: {
+        schoolId,
+        studentId: request.studentId,
+        termId: request.termId,
+        status: { in: ["Submitted", "Approved", "Published"] },
+      },
+    });
+    if (existingResult) {
+      return failResponse("Scores are locked. The class results have already been submitted for approval.");
+    }
+
     const total = request.firstCA + request.secondCA + request.exam;
     const grade = await GradingService.getGrade(schoolId, total);
 
@@ -73,6 +110,9 @@ export class ScoreService {
     let scoreRecord;
 
     if (existing) {
+      if (existing.isLocked) {
+        return failResponse("This score is locked and cannot be edited.");
+      }
       scoreRecord = await prisma.score.update({
         where: { id: existing.id },
         data: {
@@ -104,6 +144,12 @@ export class ScoreService {
         },
       });
     }
+
+    // Recompute subject positions for this class+subject+term
+    await this.computeSubjectPositions(schoolId, request.classId, request.subjectId, request.termId);
+
+    // Re-fetch the score to get updated subjectPosition
+    scoreRecord = await prisma.score.findUnique({ where: { id: scoreRecord.id } });
 
     return successResponse(
       this.mapToResponse(scoreRecord, student, subject.name),
@@ -143,6 +189,19 @@ export class ScoreService {
     const responses: any[] = [];
 
     // Run sequentially to ensure proper database locking/transactions or simplicity
+    // Check if scores are locked for any student in this class+term
+    const lockedResult = await prisma.result.findFirst({
+      where: {
+        schoolId,
+        classId: request.classId,
+        termId: request.termId,
+        status: { in: ["Submitted", "Approved", "Published"] },
+      },
+    });
+    if (lockedResult) {
+      return failResponse("Scores are locked. The class results have already been submitted for approval.");
+    }
+
     for (const entry of request.scores) {
       const student = await prisma.student.findFirst({
         where: { id: entry.studentId, schoolId },
@@ -165,6 +224,7 @@ export class ScoreService {
       let scoreRecord;
 
       if (existing) {
+        if (existing.isLocked) continue; // skip locked scores
         scoreRecord = await prisma.score.update({
           where: { id: existing.id },
           data: {
@@ -199,6 +259,9 @@ export class ScoreService {
 
       responses.push(this.mapToResponse(scoreRecord, student, subject.name));
     }
+
+    // Recompute subject positions
+    await this.computeSubjectPositions(schoolId, request.classId, request.subjectId, request.termId);
 
     return successResponse(responses, `${responses.length} scores entered successfully.`);
   }

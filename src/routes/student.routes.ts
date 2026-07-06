@@ -7,7 +7,7 @@ import { createStudentSchema, updateStudentSchema } from "../validations/student
 
 const router = Router();
 
-router.use(authMiddleware(["SuperAdmin", "SchoolAdmin"]));
+router.use(authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]));
 router.use(requireSchoolId);
 
 /**
@@ -167,7 +167,7 @@ router.get("/:id", StudentController.getById);
  *       400:
  *         description: Validation error or student limit reached
  */
-router.post("/", validateBody(createStudentSchema), StudentController.create);
+router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(createStudentSchema), StudentController.create);
 
 /**
  * @swagger
@@ -229,7 +229,7 @@ router.post("/", validateBody(createStudentSchema), StudentController.create);
  *                 description: Parent's ID card number
  *               status:
  *                 type: string
- *                 enum: [Active, Graduated, Archived, Suspended]
+ *                 enum: [Active, Graduated, Archived, Suspended, Left]
  *               profilePictureUrl:
  *                 type: string
  *                 description: URL of the student's profile picture
@@ -243,7 +243,7 @@ router.post("/", validateBody(createStudentSchema), StudentController.create);
  *       404:
  *         description: Student not found
  */
-router.put("/:id", validateBody(updateStudentSchema), StudentController.update);
+router.put("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(updateStudentSchema), StudentController.update);
 
 /**
  * @swagger
@@ -272,6 +272,50 @@ router.put("/:id", validateBody(updateStudentSchema), StudentController.update);
  *       404:
  *         description: Student not found
  */
-router.delete("/:id", StudentController.delete);
+router.delete("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), StudentController.delete);
+
+/**
+ * @swagger
+ * /api/student/{id}/reset-password:
+ *   put:
+ *     summary: Reset a student's login password (SchoolAdmin only)
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The student ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: The new password for the student
+ *     responses:
+ *       200:
+ *         description: Student password reset successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Student not found
+ */
+router.put("/:id/reset-password", authMiddleware(["SchoolAdmin"]), StudentController.resetPassword);
 
 export default router;

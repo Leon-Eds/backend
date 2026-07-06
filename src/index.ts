@@ -28,6 +28,9 @@ import attendanceRoutes from "./routes/attendance.routes";
 import paymentPlanRoutes from "./routes/paymentPlan.routes";
 import paymentRoutes from "./routes/payment.routes";
 import subscriptionLogRoutes from "./routes/subscriptionLog.routes";
+import bursarRoutes from "./routes/bursar.routes";
+import promotionRoutes from "./routes/promotion.routes";
+import reportRoutes from "./routes/report.routes";
 
 dotenv.config();
 
@@ -152,6 +155,9 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payment-plans", paymentPlanRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription-logs", subscriptionLogRoutes);
+app.use("/api/bursar", bursarRoutes);
+app.use("/api/promotion", promotionRoutes);
+app.use("/api/report", reportRoutes);
 
 // Error Handling Middleware (Must be registered last)
 app.use(errorMiddleware);

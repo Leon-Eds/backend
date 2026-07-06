@@ -121,6 +121,10 @@ export class ResultService {
     // Sort by average descending
     const ranked = [...studentResults].sort((a, b) => b.average - a.average);
 
+    // Compute class average
+    const totalAverageSum = ranked.reduce((sum, r) => sum + r.average, 0);
+    const classAverage = ranked.length > 0 ? Math.round((totalAverageSum / ranked.length) * 100) / 100 : 0;
+
     let position = 0;
     let lastAverage = -1;
 
@@ -146,6 +150,7 @@ export class ResultService {
           data: {
             totalScore: studentData.totalScore,
             average: studentData.average,
+            classAverage,
             position,
             subjectCount: studentData.subjectCount,
             status: "Draft",
@@ -161,6 +166,7 @@ export class ResultService {
             academicSessionId: term.academicSessionId,
             totalScore: studentData.totalScore,
             average: studentData.average,
+            classAverage,
             position,
             subjectCount: studentData.subjectCount,
             status: "Draft",
@@ -229,6 +235,12 @@ export class ResultService {
 
     await prisma.$transaction(operations);
 
+    // Lock all scores for this class+term to prevent further edits
+    await prisma.score.updateMany({
+      where: { schoolId, classId, termId },
+      data: { isLocked: true },
+    });
+
     return successResponse(true, "Results submitted for approval.");
   }
 
@@ -267,6 +279,12 @@ export class ResultService {
           status: "Draft",
           adminComment: request.adminComment || "",
         },
+      });
+
+      // Unlock scores so teachers can re-enter them
+      await prisma.score.updateMany({
+        where: { schoolId, classId, termId },
+        data: { isLocked: false },
       });
     }
 

@@ -16,6 +16,8 @@ export class FeeService {
       balance,
       status: fee.status,
       isCleared: fee.status === "Cleared",
+      receiptImageUrl: fee.receiptImageUrl || "",
+      description: fee.description || "",
       clearedAt: fee.clearedAt,
     };
   }
@@ -46,6 +48,8 @@ export class FeeService {
         data: {
           amountDue: request.amountDue,
           amountPaid: request.amountPaid,
+          receiptImageUrl: request.receiptImageUrl || existing.receiptImageUrl,
+          description: request.description || existing.description,
           status,
           clearedAt: status === "Cleared" ? (existing.clearedAt ? existing.clearedAt : new Date()) : null,
         },
@@ -59,6 +63,8 @@ export class FeeService {
           academicSessionId: request.academicSessionId,
           amountDue: request.amountDue,
           amountPaid: request.amountPaid,
+          receiptImageUrl: request.receiptImageUrl || "",
+          description: request.description || "",
           status,
           clearedAt: status === "Cleared" ? new Date() : null,
         },
@@ -91,6 +97,9 @@ export class FeeService {
         balance: 0,
         status: "NotRecorded",
         isCleared: false,
+        receiptImageUrl: "",
+        description: "",
+        clearedAt: null,
       }, "No fee record found for this term.");
     }
 
@@ -139,6 +148,8 @@ export class FeeService {
         balance: 0,
         status: "NotRecorded",
         isCleared: false,
+        receiptImageUrl: "",
+        description: "",
         clearedAt: null,
       };
     });

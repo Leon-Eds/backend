@@ -1,0 +1,147 @@
+﻿This should serve as the complete end to end description of roles and flow for the leoned school system. In this system, there will be 5 actors including:
+1. Super admin
+2. School admin
+3. Teacher
+4. Student
+5. Bursar
+
+The roles of each actors includes:-
+1. Super-admin
+   1. the super admin can be able to view number of schools, students and staffs (teachers and bursars) in the whole system as well as the total number of platform users.
+   2. Super admin will be able to suspend and activate a school
+   3. They should be able to reset a school password
+   4. They should be able to add and set values for subscriptions (billings and payment)
+   5. They should be able to manually upgrade or downgrade a school’s subscription plan
+   6. They should be able to see the available subscription plans
+   7. They should be able to see the number of schools subscribed to each plan
+   8. They should be able to see the amount of money made from the subscriptions
+   9. They should be able to see the log of payments made with timestamps
+1.  School Admin
+   1. the school admin creates an account from the landing page and registers the school.
+   2. He should be able to register and edit the school’s current academic session
+   3. He should be able to create and edit the term under the academic session
+   4. He should be able to create classes under the set academic session
+   5. He should be able to create/enroll students into the school,
+   6. He should be able to create teachers and bursars
+   7. He should be able to view enrolled students information
+   8. He should be able to create ID cards for student with informations like school name,school logo, student full name, student admission number, student picture, class and school contact info (the ID will be themed with the school official theme colour) and a qr code embedded with their id details(ie school name, student name and admission number).
+   9. He should be able to reset students password (provided with registration number and school ID)
+   10. He should be able to view teachers information and also deactivate or activate them. A deactivated teacher will be unable to acces their school-teacher portal
+   11. He should be able to view classes, students in the class with their form teachers and assigned curriculum
+   12. He should be able to create and edit subjects and assign to classes
+   13. He should be abe to assign teachers as form teachers to classes (one form teacher for a class, but one teacher can be form teacher to multiple classes)
+   14. He should be able to assign subjects and classes to teachers (a teacher can teach multiple subjects in a class and at multiple classes at the same time)
+   15. He should be able to receive (image) and clear students fee payment with descriptions and also generate a receipt for the student payment, with the following data :- school name, school logo, themed with school theme colour, student name, class, payment description, amount payed, clearance status (whether the student fees are cleared or not), and payment date.
+   16. He should be able to set unique theme for the school and should also be able to edit the school information
+   17. He should be able to validate class results before the student can view them (approving them)
+   18. He should be able to graduate and promote students to the next class at the beginning of a new academic session without having to re-enroll them. Also when a student leaves the school, he should be able to make them as LEFT without deleting his records (so they won’t be able to login to their school-studet portal again)
+   19. He should be able to view a specific student activities (academic results, fee payments and attendance records) across academic sessions and terms (like an archive)
+   20. He should be able to add a bursar.
+   21. He should be able to send broadcast messages to the staffs and students portals(dashboard)
+   22. He should be send a message to specific student, staff dashboard. The messages both broadcast and specific can have statuses of HEALTH, EMERGENCY, REMINDERS, SUMMONS or ACADEMIC NOTICE. 
+   23. He should be able to change password by inputting his current password and new password.
+   24. He should be able to upgrade school subscription plan.
+   25. Report generation
+      1.  He should be able to generate students enrollment reports based on academic session, class and gender.
+      2.  He should be able to generate attendance reports for students by class, academic session and term.
+      3.  He should be able to generate students academic performance reports by class, subject, academic session and term.
+      4.  He should be able to generate fee payment reports showing paid, pending and outstanding payments for students.
+      5.  He should be able to generate revenue reports showing the total amount received within a selected date range.
+      6.  He should be able to generate reports of promoted, graduated and students who have left the school.
+      7. He should be able to generate staff reports showing teachers, form teachers and bursars currently active in the school.
+      8.  He should be able to generate reports of students with outstanding school fees.
+      9.  He should be able to export generated reports in PDF and Excel formats.
+      10.  He should be able to print any generated report directly from the system. 
+
+
+2. Teacher
+   1. Teacher should be able to login with their email address and password provided to them by the school admin
+   2. They should be able to see only the classes assigned to them and the subjects per class
+   3. They should be able to view students results and update their grades and score per subjects per class
+   4. They should be able to save the result without sending it for approval
+   5. They can, at the end of the term, be able to push the results for approval.
+   6. Form Teachers should be able to view classes that they form and mark their attendance daily
+   7. Only form teachers of a class is allowed to take daily attendance for the class
+   8. The form teacher can also take the students attendance by scanning the qrcode and getting their admission number from their Id
+   9. When even subject result of a class have been uploaded and pushed for approval by the subject the teachers, only the form teachers can view the results student by student (that is every subject for a particular student) adding remarks and approving them.
+   10. They can see the number of students they are teaching on their dashboard
+   11. They should be able to change their password by inputting the old one and the desired new one
+   12. They should be able to see messages sent by the school admin
+   13. Report generation
+      1. They should be able to generate class result reports for classes assigned to them.
+      2.  Form teachers should be able to generate class attendance reports for their classes.
+      3.  Form teachers should be able to generate individual student report sheets after the school admin has approved the results.
+      4.  They should be able to export reports in PDF format. 
+
+
+3. Student
+   1. A student should be able to login with their admission number and the password
+   2. They should be see to see their details(READ only)
+   3. They should be able to receive messages sent by the school admin
+   4. They should be able to upload shool payment receipts with descriptions for the school bursar or school admin to approve
+   5. They should be able to track the payment status, cleared or pending
+   6. They should be able to see their attendance record for each day of the academic session and their percentage.
+   7. They should be able to see their result for a term when the school approves it
+   8. They should be able to generate and download their term result
+   9. They should also be able to view their results from previous terms.
+   10. They should not be able to change their passwords
+   11. Report Generations
+      1. They should be able to download and print their approved term result.
+      2.  They should be able to download their attendance report for a selected academic session and term.
+      3.  They should be able to download their payment receipts for approved fee payments.
+      4.  They should be able to download their student ID card. 
+
+
+4. Bursars
+   1. They should be able to login with their email and password provided by the school admin
+   2. Their sole role is to approve fee payment sent by student
+   3. They should be able to receive student payment result and approve them just as stipulated in the school-admin role.
+   4. They should be able to change their password by inputting the old one and the desired new one.
+
+
+
+
+
+
+FLOWS
+   1. FOR SUBSCRIPTION PLANS
+   1. The super admin creates the plans
+   2. The school admin upgrades to their plan of choice
+   3. The super admin receives logs
+
+
+   2. FOR STUDENT ENROLLMENT
+   1. The school admin creates and activates the academic session
+   2. He creates the term and set it as current
+   3. He creates classes 
+   4. He enrolls students and add them to a class
+
+
+   3. FOR RESULT SYSTEM
+   1. The subject teachers fills the class students result in a CA1(20 marks max), CA2 (20 marks max) and Exam(60 marks max) format, the system calculates total for each student, their respective grade and their score position (the positon for the particular subject) which will be sent to the backend.
+   2. When the teacher completes the result for a particular subject for a class, they can save or send to the form teacher of the class for approval. When sent for approval the teacher should not be able to edit the subject result again. 
+   3. The form teacher will now be able to see the results report of the students in their class in alphabetical order (the complete subjects of the class and the students' scores in each of them). The system should also compute the student’s total score, their average score and class position.
+   4. When the result for all the subject have been sent for the form tteacher to approve, she can add remarks to the students result report and approve (send to the school admin for final approval)
+   5. The school admin finally approves the result and the students with cleared fees status will be able to see and download their result.
+
+
+   4. FEE PAYMENT
+   1. The student uploads an image of their payment with the description
+   2. The school admin and bursar receives the image, verifies payment and clears them.
+   3. The student sees the cleared status on their dashboard.
+   4. The student can now generate and print receipt
+
+
+   5. ATTENDANCE SYSTEM
+   1. The school admin assigns a form teacher to a class
+   2. The form teacher takes the class attendance by either clicking present or absent or by scanning the student id, the unscanned id will be marked absent for the day
+   3. The form teacher can see the calender and view previous attendance record for the term
+   4. The student when marked present can see a green shade on the calendar on the dashboard 
+
+
+   6.  REPORT GENERATION
+   1. The user selects the report type to be generated
+   2.  The system requests the necessary filters such as academic session, term, class, subject or date range depending on the selected report
+   3.  The system retrieves and processes the requested data
+   4.  The report is generated and displayed to the user in a printable format.
+   5. The user can download the report as a PDF or Excel document or print it directly from the system.

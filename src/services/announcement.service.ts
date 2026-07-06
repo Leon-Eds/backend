@@ -8,6 +8,7 @@ export class AnnouncementService {
       title: a.title,
       content: a.content,
       audience: a.audience,
+      category: a.category || "GENERAL",
       targetClassId: a.targetClassId || null,
       createdByUserId: a.createdByUserId,
       createdByName: a.createdByUser?.name || null,
@@ -21,6 +22,9 @@ export class AnnouncementService {
     const where: any = { schoolId };
     if (params.audience) {
       where.audience = params.audience;
+    }
+    if (params.category) {
+      where.category = params.category;
     }
 
     const totalCount = await prisma.announcement.count({ where });
@@ -84,6 +88,7 @@ export class AnnouncementService {
         title: request.title,
         content: request.content,
         audience: request.audience || "All",
+        category: request.category || "GENERAL",
         targetClassId: request.targetClassId || null,
       },
       include: {
