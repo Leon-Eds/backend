@@ -244,6 +244,39 @@ router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin", "T
 
 /**
  * @swagger
+ * /api/result/approvals/pending-count:
+ *   get:
+ *     summary: Get aggregate count of student results pending approval (SchoolAdmin only)
+ *     tags: [Results]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Pending approvals count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ */
+router.get("/approvals/pending-count", authMiddleware(["SchoolAdmin"]), requireSchoolId, ResultController.getPendingApprovalsCount);
+
+/**
+ * @swagger
  * /api/result/my/term/{termId}:
  *   get:
  *     summary: Retrieve the authenticated student's results

@@ -113,4 +113,17 @@ export class ResultController {
       next(error);
     }
   }
+
+  static async getPendingApprovalsCount(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const result = await ResultService.getPendingApprovalsCount(schoolId);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

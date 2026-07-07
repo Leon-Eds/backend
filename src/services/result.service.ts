@@ -474,4 +474,14 @@ export class ResultService {
       result: fullResult.data,
     }, "Result retrieved.");
   }
+
+  static async getPendingApprovalsCount(schoolId: string) {
+    const count = await prisma.result.count({
+      where: {
+        schoolId,
+        status: "Submitted",
+      },
+    });
+    return successResponse({ count }, "Pending approvals count retrieved.");
+  }
 }
