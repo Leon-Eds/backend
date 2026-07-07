@@ -59,6 +59,63 @@ export class BursarService {
   }
 
   /**
+   * Get all Bursars in the school
+   */
+  static async getBursars(schoolId: string, params: any) {
+    const isAll = params.all === "true" || params.pageSize === "0" || params.pageSize === 0;
+    const search = params.search ? params.search.toLowerCase() : "";
+
+    const where: any = {
+      schoolId,
+      role: "Bursar",
+    };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const totalCount = await prisma.user.count({ where });
+
+    const pageNumber = isAll ? 1 : parseInt(params.pageNumber || "1", 10);
+    const pageSize = isAll ? (totalCount || 1) : parseInt(params.pageSize || "20", 10);
+
+    const bursars = await prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      ...(isAll ? {} : {
+        skip: (pageNumber - 1) * pageSize,
+        take: pageSize,
+      }),
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        profilePictureUrl: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    const items = bursars.map((b) => ({
+      id: b.id,
+      fullName: b.name,
+      email: b.email,
+      role: b.role,
+      profilePictureUrl: b.profilePictureUrl || "",
+      isActive: b.isActive,
+      createdAt: b.createdAt,
+    }));
+
+    const pagedResult = createPagedResult(items, totalCount, pageNumber, pageSize);
+
+    return successResponse(pagedResult);
+  }
+
+  /**
    * Get fee status for a single student in a term
    */
   static async getStudentFeeStatus(schoolId: string, studentId: string, termId: string) {

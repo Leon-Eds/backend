@@ -16,6 +16,16 @@ export class BursarController {
     }
   }
 
+  static async getBursars(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const result = await BursarService.getBursars(schoolId, req.query);
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getStudentFeeStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;

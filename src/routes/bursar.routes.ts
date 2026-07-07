@@ -59,6 +59,49 @@ router.use(requireSchoolId);
 
 /**
  * @swagger
+ * /api/bursar:
+ *   get:
+ *     summary: Retrieve all bursars in the school
+ *     tags: [Bursar]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search query for bursar name or email
+ *       - in: query
+ *         name: pageNumber
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Page size
+ *       - in: query
+ *         name: all
+ *         schema:
+ *           type: boolean
+ *         description: Retrieve all records (ignores pagination)
+ *     responses:
+ *       200:
+ *         description: List of bursars retrieved successfully
+ */
+router.get("/", BursarController.getBursars);
+
+/**
+ * @swagger
  * tags:
  *   name: Bursar
  *   description: Fee management APIs for Bursars and SchoolAdmins
