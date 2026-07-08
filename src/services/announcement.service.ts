@@ -1,5 +1,6 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
+import { NotificationService } from "./notification.service";
 
 export class AnnouncementService {
   private static mapToResponse(a: any) {
@@ -96,7 +97,10 @@ export class AnnouncementService {
       },
     });
 
-    return successResponse(this.mapToResponse(announcement), "Announcement created successfully.");
+    const responseData = this.mapToResponse(announcement);
+    NotificationService.sendToSchool(schoolId, "announcement_created", responseData);
+
+    return successResponse(responseData, "Announcement created successfully.");
   }
 
   static async deleteAnnouncement(schoolId: string, announcementId: string) {

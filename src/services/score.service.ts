@@ -2,6 +2,8 @@ import { prisma } from "../config/db";
 import { GradingService } from "./grading.service";
 import { TeacherPortalService } from "./teacher-portal.service";
 import { successResponse, failResponse } from "../utils/response";
+import { NotificationService } from "./notification.service";
+import { ResultService } from "./result.service";
 
 export class ScoreService {
   private static mapToResponse(s: any, student: any, subjectName: string) {
@@ -151,6 +153,9 @@ export class ScoreService {
     // Re-fetch the score to get updated subjectPosition
     scoreRecord = await prisma.score.findUnique({ where: { id: scoreRecord.id } });
 
+    // Check if class score sheet is complete and notify Form Teacher
+    this.notifyFormTeacherIfComplete(schoolId, request.classId, request.termId);
+
     return successResponse(
       this.mapToResponse(scoreRecord, student, subject.name),
       "Score entered successfully."
@@ -262,6 +267,9 @@ export class ScoreService {
 
     // Recompute subject positions
     await this.computeSubjectPositions(schoolId, request.classId, request.subjectId, request.termId);
+
+    // Check if class score sheet is complete and notify Form Teacher
+    this.notifyFormTeacherIfComplete(schoolId, request.classId, request.termId);
 
     return successResponse(responses, `${responses.length} scores entered successfully.`);
   }
@@ -376,5 +384,31 @@ export class ScoreService {
     }));
 
     return successResponse(response, "Student scores retrieved.");
+  }
+
+  private static async notifyFormTeacherIfComplete(schoolId: string, classId: string, termId: string) {
+    try {
+      const { allEntered } = await ResultService.checkAllSubjectsEntered(schoolId, classId, termId);
+      if (allEntered) {
+        const classEntity = await prisma.class.findFirst({
+          where: { id: classId, schoolId },
+          include: { formTeacher: true },
+        });
+        if (classEntity?.formTeacher?.userId) {
+          NotificationService.sendToUser(
+            classEntity.formTeacher.userId,
+            "class_results_ready",
+            {
+              classId,
+              className: `${classEntity.name} ${classEntity.arm}`.trim(),
+              termId,
+              message: `All subject scores have been entered for class ${classEntity.name} ${classEntity.arm}. You can now compute and submit results.`
+            }
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check or send form teacher notification:", err);
+    }
   }
 }

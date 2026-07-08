@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import path from "path";
+import http from "http";
+import { Server } from "socket.io";
+import { NotificationService } from "./services/notification.service";
 
 // Import Middlewares
 import { errorMiddleware } from "./middlewares/error.middleware";
@@ -162,7 +165,37 @@ app.use("/api/report", reportRoutes);
 // Error Handling Middleware (Must be registered last)
 app.use(errorMiddleware);
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+io.on("connection", (socket) => {
+  console.log(`Socket client connected: ${socket.id}`);
+
+  socket.on("register", ({ userId, schoolId }) => {
+    if (userId) {
+      socket.join(`user:${userId}`);
+      console.log(`Socket ${socket.id} joined user:${userId} room.`);
+    }
+    if (schoolId) {
+      socket.join(`school:${schoolId}`);
+      console.log(`Socket ${socket.id} joined school:${schoolId} room.`);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`Socket client disconnected: ${socket.id}`);
+  });
+});
+
+NotificationService.init(io);
+
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Swagger docs available at http://localhost:${PORT}/swagger`);
 });
