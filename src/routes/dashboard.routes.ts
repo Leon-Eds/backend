@@ -89,4 +89,25 @@ router.get("/teacher", authMiddleware(["Teacher"]), requireSchoolId, DashboardCo
  */
 router.get("/student", authMiddleware(["Student"]), requireSchoolId, DashboardController.getStudentDashboard);
 
+/**
+ * @swagger
+ * /api/dashboard/bursar:
+ *   get:
+ *     summary: Retrieve dashboard metrics for the authenticated bursar
+ *     tags: [Dashboards]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Bursar dashboard metrics retrieved successfully
+ */
+router.get("/bursar", authMiddleware(["Bursar"]), requireSchoolId, DashboardController.getBursarDashboard);
+
 export default router;

@@ -55,4 +55,18 @@ export class DashboardController {
       next(error);
     }
   }
+
+  static async getBursarDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const result = await DashboardService.getBursarDashboard(schoolId, userId);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

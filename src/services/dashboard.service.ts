@@ -213,6 +213,54 @@ export class DashboardService {
       classArm: student.class ? student.class.arm : null,
       currentSession: currentSession?.name || null,
       currentTerm: currentTerm?.termNumber || null,
+      profilePictureUrl: student.profilePictureUrl || "",
+    });
+  }
+
+  static async getBursarDashboard(schoolId: string, userId: string) {
+    const user = await prisma.user.findFirst({
+      where: { id: userId, schoolId, role: "Bursar" },
+    });
+
+    if (!user) {
+      return failResponse("Bursar profile not found.");
+    }
+
+    const currentSession = await prisma.academicSession.findFirst({
+      where: { schoolId, isCurrent: true },
+    });
+
+    const currentTerm = currentSession
+      ? await prisma.term.findFirst({
+          where: { academicSessionId: currentSession.id, isCurrent: true },
+        })
+      : null;
+
+    const pendingPayments = await prisma.feePayment.count({
+      where: {
+        schoolId,
+        status: "Pending",
+        ...(currentTerm ? { termId: currentTerm.id } : {}),
+      },
+    });
+
+    const clearedPayments = await prisma.feePayment.count({
+      where: {
+        schoolId,
+        status: "Cleared",
+        ...(currentTerm ? { termId: currentTerm.id } : {}),
+      },
+    });
+
+    return successResponse({
+      bursarId: user.id,
+      fullName: user.name,
+      email: user.email,
+      profilePictureUrl: user.profilePictureUrl || "",
+      currentSession: currentSession?.name || null,
+      currentTerm: currentTerm?.termNumber || null,
+      pendingPaymentsCount: pendingPayments,
+      clearedPaymentsCount: clearedPayments,
     });
   }
 }
