@@ -7,6 +7,12 @@ import { createStudentSchema, updateStudentSchema } from "../validations/student
 
 const router = Router();
 
+// Student-accessible route for self ID card download
+router.get("/idcard/download", authMiddleware(["Student"]), requireSchoolId, StudentController.downloadMyIdCardPdf);
+
+// Admin-accessible route for specific student ID card download
+router.get("/:id/idcard", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.downloadStudentIdCardPdf);
+
 router.use(authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]));
 router.use(requireSchoolId);
 

@@ -74,7 +74,9 @@ enum AnnouncementAudience {
   Students
   Teachers
   Class
+  SpecificUser
 }
+
 
 enum AnnouncementCategory {
   GENERAL
@@ -153,7 +155,9 @@ model User {
   teachers           Teacher[]          @relation("UserToTeacher")
   clearedFeePayments FeePayment[]       @relation("UserToClearedByUser")
   announcements      Announcement[]     @relation("UserToAnnouncement")
+  targetedAnnouncements Announcement[] @relation("UserToTargetedAnnouncement")
 }
+
 
 model Parent {
   id                String    @id @default(uuid()) @db.Uuid
@@ -437,10 +441,12 @@ model Announcement {
   audience       AnnouncementAudience  @default(All)
   category       AnnouncementCategory  @default(GENERAL)
   targetClassId  String?               @db.Uuid
+  targetUserId   String?               @db.Uuid
   createdAt      DateTime              @default(now())
 
   school         School                @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   createdByUser  User                  @relation("UserToAnnouncement", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  targetUser     User?                 @relation("UserToTargetedAnnouncement", fields: [targetUserId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
 }

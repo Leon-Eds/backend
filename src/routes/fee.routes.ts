@@ -235,4 +235,7 @@ router.post("/upload-receipt", authMiddleware(["Student"]), validateBody(uploadR
  */
 router.get("/my-status", authMiddleware(["Student"]), FeeController.getMyFeeStatus);
 
+// Download PDF receipt for a payment transaction
+router.get("/receipt/:paymentId/pdf", authMiddleware(["Student", "Bursar", "SchoolAdmin", "SuperAdmin"]), FeeController.downloadReceiptPdf);
+
 export default router;

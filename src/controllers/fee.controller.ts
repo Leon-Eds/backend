@@ -2,6 +2,8 @@ import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types";
 import { FeeService } from "../services/fee.service";
 import { failResponse } from "../utils/response";
+import { prisma } from "../config/db";
+
 
 export class FeeController {
   static async recordPayment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -96,4 +98,39 @@ export class FeeController {
       next(error);
     }
   }
+
+  static async downloadReceiptPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { paymentId } = req.params;
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+
+      // Fetch payment record first to check ownership if Student
+      const feePayment = await prisma.feePayment.findFirst({
+        where: { id: paymentId, schoolId },
+        include: { student: true }
+      });
+
+      if (!feePayment) {
+        return res.status(404).json(failResponse("Receipt not found."));
+      }
+
+      if (userRole === "Student" && feePayment.student.userId !== userId) {
+        return res.status(403).json(failResponse("Access Denied: You cannot download other students' receipts."));
+      }
+
+      const result = await FeeService.generateFeeReceiptPdf(schoolId, paymentId);
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=receipt-${paymentId}.pdf`);
+      return res.send(result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

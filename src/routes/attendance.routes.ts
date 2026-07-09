@@ -3,7 +3,7 @@ import { AttendanceController } from "../controllers/attendance.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
-import { recordAttendanceSchema } from "../validations/attendance.validation";
+import { recordAttendanceSchema, scanAttendanceSchema } from "../validations/attendance.validation";
 
 const router = Router();
 
@@ -219,6 +219,15 @@ router.get(
   authMiddleware(["Student"]),
   requireSchoolId,
   AttendanceController.getMyAttendanceRecord
+);
+
+// Scan student ID card QR code to mark attendance
+router.post(
+  "/scan",
+  authMiddleware(["SchoolAdmin", "Teacher"]),
+  requireSchoolId,
+  validateBody(scanAttendanceSchema),
+  AttendanceController.recordScanAttendance
 );
 
 export default router;

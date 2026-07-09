@@ -313,4 +313,113 @@ export class AttendanceService {
       records,
     }, "Student attendance records retrieved.");
   }
+
+  /**
+   * Scan QR Code / ID card to record attendance for a student.
+   * Auto-initializes other active class students as Absent if daily sheet doesn't exist.
+   */
+  static async recordScanAttendance(
+    schoolId: string,
+    userId: string,
+    userRole: string,
+    request: any
+  ) {
+    const student = await prisma.student.findFirst({
+      where: {
+        schoolId,
+        admissionNumber: { equals: request.admissionNumber, mode: "insensitive" }
+      },
+      include: { class: true }
+    });
+
+    if (!student || !student.classId || !student.class) {
+      return failResponse("Student profile or class assignment not found.");
+    }
+
+    let teacherId: string | null = null;
+    let teacherProfile: any = null;
+
+    // Enforce Form Teacher boundary
+    if (userRole === "Teacher") {
+      teacherProfile = await this.resolveTeacher(schoolId, userId);
+      if (!teacherProfile) {
+        return failResponse("Teacher profile not found.");
+      }
+
+      if (student.class.formTeacherId !== teacherProfile.id) {
+        return failResponse("Access Denied: Only the assigned Form Teacher of this class can take attendance.");
+      }
+      teacherId = teacherProfile.id;
+    }
+
+    const parsedDate = new Date(`${request.date}T00:00:00.000Z`);
+
+    // Check if daily sheet exists
+    const existingCount = await prisma.attendance.count({
+      where: {
+        schoolId,
+        classId: student.classId,
+        date: parsedDate,
+      }
+    });
+
+    if (existingCount === 0) {
+      // Find all active students in class
+      const activeStudents = await prisma.student.findMany({
+        where: {
+          classId: student.classId,
+          schoolId,
+          status: "Active",
+        }
+      });
+
+      // Auto-initialize other students as Absent (Unscanned)
+      const operations = activeStudents.map((s) => {
+        const isScanned = s.id === student.id;
+        const data = {
+          schoolId,
+          classId: student.classId!,
+          studentId: s.id,
+          date: parsedDate,
+          status: isScanned ? (request.status || "Present") : "Absent",
+          remarks: isScanned ? (request.remarks || "Scanned QR Code") : "Unscanned (Default Absent)",
+          takenByTeacherId: teacherId,
+        };
+
+        return prisma.attendance.create({ data });
+      });
+
+      await prisma.$transaction(operations);
+    } else {
+      // Daily sheet already exists, upsert just this student
+      const data = {
+        schoolId,
+        classId: student.classId,
+        studentId: student.id,
+        date: parsedDate,
+        status: request.status || "Present",
+        remarks: request.remarks || "Scanned QR Code",
+        takenByTeacherId: teacherId,
+      };
+
+      await prisma.attendance.upsert({
+        where: {
+          schoolId_studentId_date: {
+            schoolId,
+            studentId: student.id,
+            date: parsedDate,
+          }
+        },
+        create: data,
+        update: {
+          status: request.status || "Present",
+          remarks: request.remarks || "Scanned QR Code",
+          takenByTeacherId: teacherId,
+        }
+      });
+    }
+
+    return successResponse(true, "Attendance recorded successfully via QR code scan.");
+  }
 }
+

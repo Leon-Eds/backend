@@ -1,6 +1,9 @@
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types";
 import { StudentService } from "../services/student.service";
+import { StudentCardService } from "../services/student-card.service";
+import { prisma } from "../config/db";
+
 
 export class StudentController {
   static async getAll(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -93,4 +96,60 @@ export class StudentController {
       next(error);
     }
   }
+
+  static async downloadMyIdCardPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Unauthorized: User context missing." });
+      }
+
+      const student = await prisma.student.findFirst({
+        where: { userId, schoolId }
+      });
+
+      if (!student) {
+        return res.status(404).json({ success: false, message: "Student profile not found." });
+      }
+
+      const result = await StudentCardService.generateStudentIdCardPdf(schoolId, student.id);
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=idcard-${student.admissionNumber || student.id}.pdf`);
+      return res.send(result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async downloadStudentIdCardPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+
+      const student = await prisma.student.findFirst({
+        where: { id, schoolId }
+      });
+
+      if (!student) {
+        return res.status(404).json({ success: false, message: "Student not found." });
+      }
+
+      const result = await StudentCardService.generateStudentIdCardPdf(schoolId, id);
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=idcard-${student.admissionNumber || student.id}.pdf`);
+      return res.send(result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

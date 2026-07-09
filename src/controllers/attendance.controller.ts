@@ -83,4 +83,24 @@ export class AttendanceController {
       next(error);
     }
   }
+
+  static async recordScanAttendance(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const userRole = req.user?.role!;
+
+      const result = await AttendanceService.recordScanAttendance(
+        schoolId,
+        userId,
+        userRole,
+        req.body
+      );
+
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

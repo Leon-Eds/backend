@@ -11,16 +11,43 @@ export class AnnouncementService {
       audience: a.audience,
       category: a.category || "GENERAL",
       targetClassId: a.targetClassId || null,
+      targetUserId: a.targetUserId || null,
       createdByUserId: a.createdByUserId,
       createdByName: a.createdByUser?.name || null,
       createdAt: a.createdAt,
     };
   }
 
-  static async getAnnouncements(schoolId: string, params: any) {
+  static async getAnnouncements(schoolId: string, params: any, userId?: string, userRole?: string) {
     const isAll = params.all === "true" || params.pageSize === "0" || params.pageSize === 0;
 
     const where: any = { schoolId };
+
+    // Apply role-based scoping
+    if (userRole === "Student") {
+      const student = await prisma.student.findFirst({
+        where: { userId, schoolId },
+        select: { classId: true }
+      });
+      where.OR = [
+        { audience: "All" },
+        { audience: "Students" },
+        ...(student?.classId ? [{ audience: "Class", targetClassId: student.classId }] : []),
+        { audience: "SpecificUser", targetUserId: userId }
+      ];
+    } else if (userRole === "Teacher") {
+      where.OR = [
+        { audience: "All" },
+        { audience: "Teachers" },
+        { audience: "SpecificUser", targetUserId: userId }
+      ];
+    } else if (userRole === "Bursar") {
+      where.OR = [
+        { audience: "All" },
+        { audience: "SpecificUser", targetUserId: userId }
+      ];
+    }
+
     if (params.audience) {
       where.audience = params.audience;
     }
@@ -72,6 +99,19 @@ export class AnnouncementService {
       return failResponse("Target class is required when audience is 'Class'.");
     }
 
+    // If audience is "SpecificUser", require targetUserId
+    if (request.audience === "SpecificUser") {
+      if (!request.targetUserId) {
+        return failResponse("Target user is required when audience is 'SpecificUser'.");
+      }
+      const targetUserExists = await prisma.user.findFirst({
+        where: { id: request.targetUserId, schoolId },
+      });
+      if (!targetUserExists) {
+        return failResponse("Target user not found in this school.");
+      }
+    }
+
     // Validate targetClassId exists if provided
     if (request.targetClassId) {
       const classExists = await prisma.class.findFirst({
@@ -91,6 +131,7 @@ export class AnnouncementService {
         audience: request.audience || "All",
         category: request.category || "GENERAL",
         targetClassId: request.targetClassId || null,
+        targetUserId: request.targetUserId || null,
       },
       include: {
         createdByUser: { select: { name: true } },
@@ -98,7 +139,13 @@ export class AnnouncementService {
     });
 
     const responseData = this.mapToResponse(announcement);
-    NotificationService.sendToSchool(schoolId, "announcement_created", responseData);
+    
+    // Broadcast notifications
+    if (announcement.audience === "SpecificUser" && announcement.targetUserId) {
+      NotificationService.sendToUser(announcement.targetUserId, "announcement_created", responseData);
+    } else {
+      NotificationService.sendToSchool(schoolId, "announcement_created", responseData);
+    }
 
     return successResponse(responseData, "Announcement created successfully.");
   }
@@ -119,3 +166,4 @@ export class AnnouncementService {
     return successResponse(true, "Announcement deleted successfully.");
   }
 }
+
