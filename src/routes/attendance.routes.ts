@@ -189,4 +189,36 @@ router.get(
   AttendanceController.getClassAttendanceStats
 );
 
+/**
+ * @swagger
+ * /api/attendance/my-record:
+ *   get:
+ *     summary: Retrieve the logged-in student's daily attendance records and percentage for a term (Student only)
+ *     tags: [Attendance]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: termId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: The term ID (defaults to current active term)
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student attendance record retrieved successfully
+ */
+router.get(
+  "/my-record",
+  authMiddleware(["Student"]),
+  requireSchoolId,
+  AttendanceController.getMyAttendanceRecord
+);
+
 export default router;

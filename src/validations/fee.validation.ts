@@ -9,3 +9,11 @@ export const recordFeePaymentSchema = z.object({
   receiptImageUrl: z.string().url("Invalid receipt image URL").optional().or(z.literal("")),
   description: z.string().max(500, "Description must be under 500 characters").optional().or(z.literal("")),
 });
+
+export const uploadReceiptSchema = z.object({
+  termId: z.string().uuid("Invalid term ID"),
+  academicSessionId: z.string().uuid("Invalid academic session ID"),
+  amountPaid: z.number().min(0),
+  receiptImageUrl: z.string().url("Invalid receipt image URL"),
+  description: z.string().max(500, "Description must be under 500 characters").optional().or(z.literal("")),
+});

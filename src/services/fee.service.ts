@@ -231,4 +231,64 @@ export class FeeService {
 
     return fee?.status === "Cleared";
   }
+
+  static async uploadReceipt(schoolId: string, userId: string, request: any) {
+    const student = await prisma.student.findFirst({
+      where: { userId, schoolId },
+    });
+
+    if (!student) {
+      return failResponse("Student profile not found.");
+    }
+
+    const existing = await prisma.feePayment.findFirst({
+      where: {
+        schoolId,
+        studentId: student.id,
+        termId: request.termId,
+      },
+    });
+
+    let feeRecord;
+
+    if (existing) {
+      feeRecord = await prisma.feePayment.update({
+        where: { id: existing.id },
+        data: {
+          amountPaid: request.amountPaid,
+          receiptImageUrl: request.receiptImageUrl,
+          description: request.description || "",
+          status: "Pending",
+        },
+      });
+    } else {
+      feeRecord = await prisma.feePayment.create({
+        data: {
+          schoolId,
+          studentId: student.id,
+          termId: request.termId,
+          academicSessionId: request.academicSessionId,
+          amountDue: 0,
+          amountPaid: request.amountPaid,
+          receiptImageUrl: request.receiptImageUrl,
+          description: request.description || "",
+          status: "Pending",
+        },
+      });
+    }
+
+    return successResponse(this.mapToResponse(feeRecord, student), "Fee payment receipt uploaded successfully.");
+  }
+
+  static async getMyFeeStatus(schoolId: string, userId: string, termId: string) {
+    const student = await prisma.student.findFirst({
+      where: { userId, schoolId },
+    });
+
+    if (!student) {
+      return failResponse("Student profile not found.");
+    }
+
+    return this.getStudentFeeStatus(schoolId, student.id, termId);
+  }
 }

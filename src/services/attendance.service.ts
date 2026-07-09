@@ -239,4 +239,78 @@ export class AttendanceService {
       stats: studentStats,
     });
   }
+
+  static async getMyAttendanceRecord(schoolId: string, userId: string, termId?: string) {
+    const student = await prisma.student.findFirst({
+      where: { userId, schoolId },
+    });
+
+    if (!student) {
+      return failResponse("Student profile not found.");
+    }
+
+    let term;
+    if (termId) {
+      term = await prisma.term.findFirst({
+        where: { id: termId },
+        include: { academicSession: true },
+      });
+    } else {
+      const currentSession = await prisma.academicSession.findFirst({
+        where: { schoolId, isCurrent: true },
+      });
+      if (currentSession) {
+        term = await prisma.term.findFirst({
+          where: { academicSessionId: currentSession.id, isCurrent: true },
+          include: { academicSession: true },
+        });
+      }
+    }
+
+    if (!term) {
+      return failResponse("Active term context not found.");
+    }
+
+    const attendances = await prisma.attendance.findMany({
+      where: {
+        schoolId,
+        studentId: student.id,
+        date: {
+          gte: term.startDate,
+          lte: term.endDate,
+        },
+      },
+      orderBy: { date: "asc" },
+    });
+
+    const totalDays = attendances.length;
+    const present = attendances.filter((a) => a.status === "Present").length;
+    const absent = attendances.filter((a) => a.status === "Absent").length;
+    const late = attendances.filter((a) => a.status === "Late").length;
+
+    const attendancePercentage = totalDays > 0 
+      ? Math.round(((present + late) / totalDays) * 100)
+      : 100;
+
+    const records = attendances.map((a) => ({
+      date: a.date.toISOString().split("T")[0],
+      status: a.status,
+      remarks: a.remarks,
+    }));
+
+    return successResponse({
+      studentId: student.id,
+      fullName: student.fullName,
+      admissionNumber: student.admissionNumber,
+      termId: term.id,
+      termName: term.termNumber,
+      sessionName: term.academicSession?.name || null,
+      totalDays,
+      present,
+      absent,
+      late,
+      attendancePercentage,
+      records,
+    }, "Student attendance records retrieved.");
+  }
 }

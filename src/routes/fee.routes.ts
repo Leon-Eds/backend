@@ -3,11 +3,10 @@ import { FeeController } from "../controllers/fee.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
-import { recordFeePaymentSchema } from "../validations/fee.validation";
+import { recordFeePaymentSchema, uploadReceiptSchema } from "../validations/fee.validation";
 
 const router = Router();
 
-router.use(authMiddleware(["SchoolAdmin"]));
 router.use(requireSchoolId);
 
 /**
@@ -62,7 +61,7 @@ router.use(requireSchoolId);
  *       200:
  *         description: Fee payment recorded successfully
  */
-router.post("/record", validateBody(recordFeePaymentSchema), FeeController.recordPayment);
+router.post("/record", authMiddleware(["SchoolAdmin"]), validateBody(recordFeePaymentSchema), FeeController.recordPayment);
 
 /**
  * @swagger
@@ -95,7 +94,7 @@ router.post("/record", validateBody(recordFeePaymentSchema), FeeController.recor
  *       200:
  *         description: Student fees cleared successfully
  */
-router.post("/clear/:studentId/:termId", FeeController.clearStudent);
+router.post("/clear/:studentId/:termId", authMiddleware(["SchoolAdmin"]), FeeController.clearStudent);
 
 /**
  * @swagger
@@ -128,7 +127,7 @@ router.post("/clear/:studentId/:termId", FeeController.clearStudent);
  *       200:
  *         description: Student fee status retrieved successfully
  */
-router.get("/student/:studentId/term/:termId", FeeController.getStudentFeeStatus);
+router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin"]), FeeController.getStudentFeeStatus);
 
 /**
  * @swagger
@@ -161,6 +160,79 @@ router.get("/student/:studentId/term/:termId", FeeController.getStudentFeeStatus
  *       200:
  *         description: Class fee overview retrieved successfully
  */
-router.get("/class/:classId/term/:termId", FeeController.getClassFeeOverview);
+router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin"]), FeeController.getClassFeeOverview);
+
+/**
+ * @swagger
+ * /api/fee/upload-receipt:
+ *   post:
+ *     summary: Upload a fee payment receipt with a description (Student only)
+ *     tags: [Fees]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - termId
+ *               - academicSessionId
+ *               - amountPaid
+ *               - receiptImageUrl
+ *             properties:
+ *               termId:
+ *                 type: string
+ *                 format: uuid
+ *               academicSessionId:
+ *                 type: string
+ *                 format: uuid
+ *               amountPaid:
+ *                 type: number
+ *               receiptImageUrl:
+ *                 type: string
+ *                 format: uri
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Fee payment receipt uploaded successfully
+ */
+router.post("/upload-receipt", authMiddleware(["Student"]), validateBody(uploadReceiptSchema), FeeController.uploadReceipt);
+
+/**
+ * @swagger
+ * /api/fee/my-status:
+ *   get:
+ *     summary: Get the logged-in student's fee status for a specific term (Student only)
+ *     tags: [Fees]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The term ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student fee status retrieved successfully
+ */
+router.get("/my-status", authMiddleware(["Student"]), FeeController.getMyFeeStatus);
 
 export default router;

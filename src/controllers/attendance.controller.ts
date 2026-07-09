@@ -70,4 +70,17 @@ export class AttendanceController {
       next(error);
     }
   }
+
+  static async getMyAttendanceRecord(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const termId = req.query.termId as string;
+
+      const result = await AttendanceService.getMyAttendanceRecord(schoolId, userId, termId);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
