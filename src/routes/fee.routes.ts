@@ -7,7 +7,6 @@ import { recordFeePaymentSchema, uploadReceiptSchema } from "../validations/fee.
 
 const router = Router();
 
-router.use(requireSchoolId);
 
 /**
  * @swagger
@@ -61,7 +60,7 @@ router.use(requireSchoolId);
  *       200:
  *         description: Fee payment recorded successfully
  */
-router.post("/record", authMiddleware(["SchoolAdmin"]), validateBody(recordFeePaymentSchema), FeeController.recordPayment);
+router.post("/record", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(recordFeePaymentSchema), FeeController.recordPayment);
 
 /**
  * @swagger
@@ -94,7 +93,7 @@ router.post("/record", authMiddleware(["SchoolAdmin"]), validateBody(recordFeePa
  *       200:
  *         description: Student fees cleared successfully
  */
-router.post("/clear/:studentId/:termId", authMiddleware(["SchoolAdmin"]), FeeController.clearStudent);
+router.post("/clear/:studentId/:termId", authMiddleware(["SchoolAdmin"]), requireSchoolId, FeeController.clearStudent);
 
 /**
  * @swagger
@@ -127,7 +126,7 @@ router.post("/clear/:studentId/:termId", authMiddleware(["SchoolAdmin"]), FeeCon
  *       200:
  *         description: Student fee status retrieved successfully
  */
-router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin"]), FeeController.getStudentFeeStatus);
+router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin"]), requireSchoolId, FeeController.getStudentFeeStatus);
 
 /**
  * @swagger
@@ -160,7 +159,7 @@ router.get("/student/:studentId/term/:termId", authMiddleware(["SchoolAdmin"]), 
  *       200:
  *         description: Class fee overview retrieved successfully
  */
-router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin"]), FeeController.getClassFeeOverview);
+router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin"]), requireSchoolId, FeeController.getClassFeeOverview);
 
 /**
  * @swagger
@@ -206,7 +205,7 @@ router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin"]), FeeC
  *       200:
  *         description: Fee payment receipt uploaded successfully
  */
-router.post("/upload-receipt", authMiddleware(["Student"]), validateBody(uploadReceiptSchema), FeeController.uploadReceipt);
+router.post("/upload-receipt", authMiddleware(["Student"]), requireSchoolId, validateBody(uploadReceiptSchema), FeeController.uploadReceipt);
 
 /**
  * @swagger
@@ -233,9 +232,9 @@ router.post("/upload-receipt", authMiddleware(["Student"]), validateBody(uploadR
  *       200:
  *         description: Student fee status retrieved successfully
  */
-router.get("/my-status", authMiddleware(["Student"]), FeeController.getMyFeeStatus);
+router.get("/my-status", authMiddleware(["Student"]), requireSchoolId, FeeController.getMyFeeStatus);
 
 // Download PDF receipt for a payment transaction
-router.get("/receipt/:paymentId/pdf", authMiddleware(["Student", "Bursar", "SchoolAdmin", "SuperAdmin"]), FeeController.downloadReceiptPdf);
+router.get("/receipt/:paymentId/pdf", authMiddleware(["Student", "Bursar", "SchoolAdmin", "SuperAdmin"]), requireSchoolId, FeeController.downloadReceiptPdf);
 
 export default router;
