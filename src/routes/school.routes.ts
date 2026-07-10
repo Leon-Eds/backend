@@ -114,6 +114,15 @@ router.get("/:id", authMiddleware(), SchoolController.getById);
  *                   font:
  *                     type: string
  *                     example: "Inter"
+ *               bankAccountName:
+ *                 type: string
+ *                 example: "LeonEd School Main Account"
+ *               bankName:
+ *                 type: string
+ *                 example: "Access Bank PLC"
+ *               bankAccountNumber:
+ *                 type: string
+ *                 example: "0123456789"
  *     responses:
  *       200:
  *         description: School profile updated successfully
