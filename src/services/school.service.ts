@@ -24,6 +24,9 @@ export class SchoolService {
       currentTeacherCount,
       currentStudentCount,
       createdAt: school.createdAt,
+      bankAccountName: school.bankAccountName || "",
+      bankName: school.bankName || "",
+      bankAccountNumber: school.bankAccountNumber || "",
     };
   }
 
@@ -99,6 +102,9 @@ export class SchoolService {
         contactPhone: request.contactPhone !== undefined ? request.contactPhone : undefined,
         logoUrl: request.logoUrl !== undefined ? request.logoUrl : undefined,
         schoolTheme: request.schoolTheme !== undefined ? request.schoolTheme : undefined,
+        bankAccountName: request.bankAccountName !== undefined ? request.bankAccountName : undefined,
+        bankName: request.bankName !== undefined ? request.bankName : undefined,
+        bankAccountNumber: request.bankAccountNumber !== undefined ? request.bankAccountNumber : undefined,
       },
       include: {
         teachers: { select: { isActive: true } },

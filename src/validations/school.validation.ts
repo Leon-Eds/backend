@@ -12,6 +12,9 @@ export const updateSchoolSchema = z.object({
     accentColor: z.string().max(30).optional(),
     font: z.string().max(100).optional(),
   }).optional(),
+  bankAccountName: z.string().max(200).optional(),
+  bankName: z.string().max(150).optional(),
+  bankAccountNumber: z.string().max(50).optional(),
 });
 
 export const updateSchoolPlanSchema = z.object({

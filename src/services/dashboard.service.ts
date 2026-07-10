@@ -195,6 +195,15 @@ export class DashboardService {
       return failResponse("Student profile not found.");
     }
 
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: {
+        bankAccountName: true,
+        bankName: true,
+        bankAccountNumber: true,
+      }
+    });
+
     const currentSession = await prisma.academicSession.findFirst({
       where: { schoolId, isCurrent: true },
     });
@@ -214,6 +223,11 @@ export class DashboardService {
       currentSession: currentSession?.name || null,
       currentTerm: currentTerm?.termNumber || null,
       profilePictureUrl: student.profilePictureUrl || "",
+      bankDetails: school ? {
+        bankAccountName: school.bankAccountName || "",
+        bankName: school.bankName || "",
+        bankAccountNumber: school.bankAccountNumber || "",
+      } : null
     });
   }
 

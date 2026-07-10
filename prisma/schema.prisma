@@ -111,6 +111,9 @@ model School {
   paystackSubscriptionCode String?      @db.VarChar(150)
   paystackCustomerCode     String?      @db.VarChar(150)
   paystackEmailToken       String?      @db.VarChar(150)
+  bankAccountName          String?      @db.VarChar(200)
+  bankName                 String?      @db.VarChar(150)
+  bankAccountNumber        String?      @db.VarChar(50)
 
   plan             PaymentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 
