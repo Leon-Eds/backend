@@ -8,7 +8,7 @@ import { createSessionSchema, createTermSchema, updateSessionSchema, updateTermS
 const router = Router();
 
 // Auth helpers
-const allRoles = authMiddleware(["SuperAdmin", "SchoolAdmin", "Teacher", "Student"]);
+const allRoles = authMiddleware(["SuperAdmin", "SchoolAdmin", "Teacher", "Student", "Bursar"]);
 const adminOnly = authMiddleware(["SuperAdmin", "SchoolAdmin"]);
 
 /**

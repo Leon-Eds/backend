@@ -7,7 +7,6 @@ import { createClassSchema, updateClassSchema, assignSubjectsToClassSchema } fro
 
 const router = Router();
 
-router.use(authMiddleware(["SuperAdmin", "SchoolAdmin"]));
 router.use(requireSchoolId);
 
 /**
@@ -38,7 +37,7 @@ router.use(requireSchoolId);
  *       401:
  *         description: Unauthorized
  */
-router.get("/", ClassController.getAll);
+router.get("/", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]), ClassController.getAll);
 
 /**
  * @swagger
@@ -67,7 +66,7 @@ router.get("/", ClassController.getAll);
  *       404:
  *         description: Class not found
  */
-router.get("/:id", ClassController.getById);
+router.get("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]), ClassController.getById);
 
 /**
  * @swagger
@@ -110,7 +109,7 @@ router.get("/:id", ClassController.getById);
  *       400:
  *         description: Invalid request body
  */
-router.post("/", validateBody(createClassSchema), ClassController.create);
+router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(createClassSchema), ClassController.create);
 
 /**
  * @swagger
@@ -154,7 +153,7 @@ router.post("/", validateBody(createClassSchema), ClassController.create);
  *       404:
  *         description: Class not found
  */
-router.put("/:id", validateBody(updateClassSchema), ClassController.update);
+router.put("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(updateClassSchema), ClassController.update);
 
 /**
  * @swagger
@@ -183,7 +182,7 @@ router.put("/:id", validateBody(updateClassSchema), ClassController.update);
  *       404:
  *         description: Class not found
  */
-router.delete("/:id", ClassController.delete);
+router.delete("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), ClassController.delete);
 
 /**
  * @swagger
@@ -226,6 +225,6 @@ router.delete("/:id", ClassController.delete);
  *       400:
  *         description: Invalid request body
  */
-router.post("/:id/subjects", validateBody(assignSubjectsToClassSchema), ClassController.assignSubjects);
+router.post("/:id/subjects", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(assignSubjectsToClassSchema), ClassController.assignSubjects);
 
 export default router;
