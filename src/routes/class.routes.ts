@@ -7,7 +7,7 @@ import { createClassSchema, updateClassSchema, assignSubjectsToClassSchema } fro
 
 const router = Router();
 
-router.use(requireSchoolId);
+// Remove top-level middleware so authMiddleware executes first to populate req.user / req.schoolId
 
 /**
  * @swagger
@@ -37,7 +37,7 @@ router.use(requireSchoolId);
  *       401:
  *         description: Unauthorized
  */
-router.get("/", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]), ClassController.getAll);
+router.get("/", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar", "Teacher"]), requireSchoolId, ClassController.getAll);
 
 /**
  * @swagger
@@ -66,7 +66,7 @@ router.get("/", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]), ClassCo
  *       404:
  *         description: Class not found
  */
-router.get("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]), ClassController.getById);
+router.get("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar", "Teacher"]), requireSchoolId, ClassController.getById);
 
 /**
  * @swagger
@@ -109,7 +109,7 @@ router.get("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]), Clas
  *       400:
  *         description: Invalid request body
  */
-router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(createClassSchema), ClassController.create);
+router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, validateBody(createClassSchema), ClassController.create);
 
 /**
  * @swagger
@@ -153,7 +153,7 @@ router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(cre
  *       404:
  *         description: Class not found
  */
-router.put("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(updateClassSchema), ClassController.update);
+router.put("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, validateBody(updateClassSchema), ClassController.update);
 
 /**
  * @swagger
@@ -182,7 +182,7 @@ router.put("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(u
  *       404:
  *         description: Class not found
  */
-router.delete("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), ClassController.delete);
+router.delete("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, ClassController.delete);
 
 /**
  * @swagger
@@ -225,6 +225,6 @@ router.delete("/:id", authMiddleware(["SuperAdmin", "SchoolAdmin"]), ClassContro
  *       400:
  *         description: Invalid request body
  */
-router.post("/:id/subjects", authMiddleware(["SuperAdmin", "SchoolAdmin"]), validateBody(assignSubjectsToClassSchema), ClassController.assignSubjects);
+router.post("/:id/subjects", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, validateBody(assignSubjectsToClassSchema), ClassController.assignSubjects);
 
 export default router;

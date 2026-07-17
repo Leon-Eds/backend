@@ -7,11 +7,25 @@ export function tenantMiddleware(req: AuthenticatedRequest, res: Response, next:
     req.schoolId = req.user.schoolId;
   }
 
-  // If schoolId is not present, we check if it is required
+  // Fallback to headers if not present on req.user
+  if (!req.schoolId) {
+    const headerSchoolId = (req.headers["school-id"] || req.headers["schoolid"] || req.headers["x-school-id"]) as string;
+    if (headerSchoolId) {
+      req.schoolId = headerSchoolId;
+    }
+  }
+
   next();
 }
 
 export function requireSchoolId(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.schoolId) {
+    const headerSchoolId = (req.headers["school-id"] || req.headers["schoolid"] || req.headers["x-school-id"]) as string;
+    if (headerSchoolId) {
+      req.schoolId = headerSchoolId;
+    }
+  }
+
   if (!req.schoolId) {
     return res.status(400).json({
       success: false,
