@@ -246,12 +246,14 @@ export class ResultService {
 
   static async approveResults(schoolId: string, classId: string, termId: string, request: any) {
     const results = await prisma.result.findMany({
-      where: { schoolId, classId, termId, status: "Submitted" },
+      where: { schoolId, classId, termId },
     });
 
     if (results.length === 0) {
-      return failResponse("No submitted results found for approval.");
+      return failResponse("No results found for this class and term. Please compute results first.");
     }
+
+    const now = new Date();
 
     if (request.approve) {
       await prisma.result.updateMany({
@@ -259,12 +261,12 @@ export class ResultService {
           schoolId,
           classId,
           termId,
-          status: "Submitted",
         },
         data: {
-          status: "Approved",
+          status: "Published",
           adminComment: request.adminComment || "",
-          approvedAt: new Date(),
+          approvedAt: now,
+          publishedAt: now,
         },
       });
     } else {
@@ -273,7 +275,6 @@ export class ResultService {
           schoolId,
           classId,
           termId,
-          status: "Submitted",
         },
         data: {
           status: "Draft",
@@ -290,17 +291,17 @@ export class ResultService {
 
     return successResponse(
       true,
-      request.approve ? "Results approved." : "Results rejected and sent back to draft."
+      request.approve ? "Results approved and published successfully." : "Results rejected and sent back to draft."
     );
   }
 
   static async publishResults(schoolId: string, classId: string, termId: string) {
     const results = await prisma.result.findMany({
-      where: { schoolId, classId, termId, status: "Approved" },
+      where: { schoolId, classId, termId },
     });
 
     if (results.length === 0) {
-      return failResponse("No approved results found to publish.");
+      return failResponse("No results found to publish.");
     }
 
     await prisma.result.updateMany({
@@ -308,7 +309,6 @@ export class ResultService {
         schoolId,
         classId,
         termId,
-        status: "Approved",
       },
       data: {
         status: "Published",
@@ -449,7 +449,7 @@ export class ResultService {
       where: { schoolId, studentId: student.id, termId },
     });
 
-    if (!result || result.status !== "Published") {
+    if (!result || (result.status !== "Published" && result.status !== "Approved")) {
       return successResponse({
         isFeesCleared: false,
         message: "Results have not been published yet for this term.",
