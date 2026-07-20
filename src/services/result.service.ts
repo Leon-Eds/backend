@@ -153,7 +153,7 @@ export class ResultService {
             classAverage,
             position,
             subjectCount: studentData.subjectCount,
-            status: "Draft",
+            status: existingResult.status,
           },
         });
       } else {
@@ -210,12 +210,22 @@ export class ResultService {
       );
     }
 
-    const results = await prisma.result.findMany({
+    let results = await prisma.result.findMany({
       where: { schoolId, classId, termId },
     });
 
     if (results.length === 0) {
-      return failResponse("No results found. Please compute results first.");
+      const computeRes = await this.computeClassResults(schoolId, classId, termId, userId, userRole);
+      if (!computeRes.success) {
+        return computeRes;
+      }
+      results = await prisma.result.findMany({
+        where: { schoolId, classId, termId },
+      });
+    }
+
+    if (results.length === 0) {
+      return failResponse("No results found to submit.");
     }
 
     // Map individual student comments
