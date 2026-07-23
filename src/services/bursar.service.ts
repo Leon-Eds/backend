@@ -116,6 +116,25 @@ export class BursarService {
   }
 
   /**
+   * Delete a Bursar user
+   */
+  static async deleteBursar(schoolId: string, id: string) {
+    const user = await prisma.user.findFirst({
+      where: { id, schoolId, role: "Bursar" },
+    });
+
+    if (!user) {
+      return failResponse("Bursar not found.");
+    }
+
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return successResponse(true, "Bursar removed successfully.");
+  }
+
+  /**
    * Get fee status for a single student in a term
    */
   static async getStudentFeeStatus(schoolId: string, studentId: string, termId: string) {

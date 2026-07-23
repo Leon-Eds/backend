@@ -26,6 +26,20 @@ export class BursarController {
     }
   }
 
+  static async deleteBursar(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+      const result = await BursarService.deleteBursar(schoolId, id);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getStudentFeeStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;

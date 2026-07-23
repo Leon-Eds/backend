@@ -53,6 +53,37 @@ const router = Router();
  */
 router.post("/", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(createBursarSchema), BursarController.createBursar);
 
+/**
+ * @swagger
+ * /api/bursar/{id}:
+ *   delete:
+ *     summary: Remove a bursar account (SchoolAdmin only)
+ *     tags: [Bursar]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The bursar user ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Bursar removed successfully
+ *       400:
+ *         description: Bad request or validation error
+ *       404:
+ *         description: Bursar not found
+ */
+router.delete("/:id", authMiddleware(["SchoolAdmin"]), requireSchoolId, BursarController.deleteBursar);
+
 // All bursar routes require Bursar or SchoolAdmin role + school context
 router.use(authMiddleware(["Bursar", "SchoolAdmin"]));
 router.use(requireSchoolId);
