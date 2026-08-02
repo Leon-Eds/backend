@@ -68,6 +68,17 @@ export class ScoreService {
       teacherId = check.teacherId;
     }
 
+    // Check if result editing is active for this class
+    const classEntity = await prisma.class.findFirst({
+      where: { id: request.classId, schoolId },
+    });
+    if (!classEntity) {
+      return failResponse("Class not found.");
+    }
+    if (!classEntity.isResultEditingActive) {
+      return failResponse("Result editing is not active for this class. The Form Teacher must activate it before scores can be entered or edited.");
+    }
+
     const student = await prisma.student.findFirst({
       where: { id: request.studentId, schoolId },
     });
@@ -181,6 +192,17 @@ export class ScoreService {
         return failResponse(check.message || "You are not assigned to teach this subject in this class.");
       }
       teacherId = check.teacherId;
+    }
+
+    // Check if result editing is active for this class
+    const classEntity = await prisma.class.findFirst({
+      where: { id: request.classId, schoolId },
+    });
+    if (!classEntity) {
+      return failResponse("Class not found.");
+    }
+    if (!classEntity.isResultEditingActive) {
+      return failResponse("Result editing is not active for this class. The Form Teacher must activate it before scores can be entered or edited.");
     }
 
     const subject = await prisma.subject.findFirst({

@@ -126,4 +126,36 @@ export class ResultController {
       next(error);
     }
   }
+
+  static async toggleResultEditing(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { classId } = req.params;
+      const userId = req.user?.id!;
+      const userRole = req.user?.role!;
+
+      const result = await ResultService.toggleResultEditing(schoolId, classId, userId, userRole);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getResultEditingStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { classId } = req.params;
+
+      const result = await ResultService.getResultEditingStatus(schoolId, classId);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

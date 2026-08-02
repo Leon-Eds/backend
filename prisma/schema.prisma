@@ -241,6 +241,7 @@ model Class {
   name              String    @db.VarChar(100)
   arm               String    @default("") @db.VarChar(50)
   level             Int       @default(1)
+  isResultEditingActive Boolean @default(false)
   createdAt         DateTime  @default(now())
 
   school             School                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)

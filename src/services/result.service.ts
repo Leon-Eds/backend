@@ -202,6 +202,11 @@ export class ResultService {
       }
     }
 
+    // Guard: Result editing must be deactivated before submission
+    if (classEntity.isResultEditingActive) {
+      return failResponse("Cannot submit results while result editing is still active. Please deactivate result editing first.");
+    }
+
     // Validation: Verify if all teachers have inputted scores for all assigned subjects
     const { allEntered, missingSubjects } = await this.checkAllSubjectsEntered(schoolId, classId, termId);
     if (!allEntered) {
@@ -493,5 +498,61 @@ export class ResultService {
       },
     });
     return successResponse({ count }, "Pending approvals count retrieved.");
+  }
+
+  static async toggleResultEditing(
+    schoolId: string,
+    classId: string,
+    userId: string,
+    userRole: string
+  ) {
+    const classEntity = await prisma.class.findFirst({
+      where: { id: classId, schoolId },
+    });
+
+    if (!classEntity) {
+      return failResponse("Class not found.");
+    }
+
+    // Role check: Only SchoolAdmin or the class's Form Teacher can toggle
+    if (userRole === "Teacher") {
+      const teacher = await this.resolveTeacher(schoolId, userId);
+      if (!teacher || classEntity.formTeacherId !== teacher.id) {
+        return failResponse("Access Denied: Only the assigned Form Teacher of this class can toggle result editing.");
+      }
+    }
+
+    const newState = !classEntity.isResultEditingActive;
+
+    await prisma.class.update({
+      where: { id: classId },
+      data: { isResultEditingActive: newState },
+    });
+
+    return successResponse(
+      { classId, isResultEditingActive: newState },
+      newState
+        ? "Result editing is now ACTIVE. Subject teachers can enter and edit scores."
+        : "Result editing is now INACTIVE. Scores can no longer be added or edited."
+    );
+  }
+
+  static async getResultEditingStatus(schoolId: string, classId: string) {
+    const classEntity = await prisma.class.findFirst({
+      where: { id: classId, schoolId },
+    });
+
+    if (!classEntity) {
+      return failResponse("Class not found.");
+    }
+
+    return successResponse(
+      {
+        classId,
+        className: `${classEntity.name} ${classEntity.arm}`.trim(),
+        isResultEditingActive: classEntity.isResultEditingActive,
+      },
+      "Result editing status retrieved."
+    );
   }
 }

@@ -277,6 +277,94 @@ router.get("/approvals/pending-count", authMiddleware(["SchoolAdmin"]), requireS
 
 /**
  * @swagger
+ * /api/result/toggle-editing/{classId}:
+ *   patch:
+ *     summary: Toggle result editing active/inactive for a class (Form Teacher/SchoolAdmin)
+ *     description: >
+ *       Toggles the isResultEditingActive flag on a class. When active, subject teachers
+ *       can enter and edit scores. When inactive, no score changes are allowed.
+ *       The form teacher must deactivate result editing before submitting results.
+ *     tags: [Results]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: classId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The class ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Result editing status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     classId:
+ *                       type: string
+ *                     isResultEditingActive:
+ *                       type: boolean
+ */
+router.patch("/toggle-editing/:classId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.toggleResultEditing);
+
+/**
+ * @swagger
+ * /api/result/editing-status/{classId}:
+ *   get:
+ *     summary: Get the current result editing status for a class (SchoolAdmin/Teacher)
+ *     tags: [Results]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: classId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The class ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Result editing status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     classId:
+ *                       type: string
+ *                     className:
+ *                       type: string
+ *                     isResultEditingActive:
+ *                       type: boolean
+ */
+router.get("/editing-status/:classId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.getResultEditingStatus);
+
+/**
+ * @swagger
  * /api/result/my/term/{termId}:
  *   get:
  *     summary: Retrieve the authenticated student's results
