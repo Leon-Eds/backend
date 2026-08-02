@@ -338,4 +338,38 @@ export class SchemeOfWorkService {
       "Class schemes of work retrieved successfully."
     );
   }
+
+  /**
+   * Get schemes of work for the authenticated student's class.
+   * If termId is not provided, defaults to the active/current term.
+   */
+  static async getMySchemes(schoolId: string, userId: string, termId?: string) {
+    const student = await prisma.student.findFirst({
+      where: { userId, schoolId },
+    });
+
+    if (!student || !student.classId) {
+      return failResponse("Student profile or assigned class not found.");
+    }
+
+    let targetTermId = termId;
+
+    if (!targetTermId) {
+      const currentSession = await prisma.academicSession.findFirst({
+        where: { schoolId, isCurrent: true },
+      });
+      const currentTerm = currentSession
+        ? await prisma.term.findFirst({
+            where: { academicSessionId: currentSession.id, isCurrent: true },
+          })
+        : null;
+
+      if (!currentTerm) {
+        return failResponse("No active term found.");
+      }
+      targetTermId = currentTerm.id;
+    }
+
+    return this.getClassSchemes(schoolId, student.classId, targetTermId);
+  }
 }

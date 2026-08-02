@@ -112,4 +112,25 @@ export class SchemeOfWorkController {
       next(error);
     }
   }
+
+  static async getMySchemes(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const { termId } = req.params;
+
+      const result = await SchemeOfWorkService.getMySchemes(
+        schoolId,
+        userId,
+        termId
+      );
+
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

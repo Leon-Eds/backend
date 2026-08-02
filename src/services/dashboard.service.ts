@@ -218,9 +218,12 @@ export class DashboardService {
       studentId: student.id,
       fullName: student.fullName,
       admissionNumber: student.admissionNumber,
+      classId: student.classId || null,
       className: student.class ? student.class.name : null,
       classArm: student.class ? student.class.arm : null,
+      currentSessionId: currentSession?.id || null,
       currentSession: currentSession?.name || null,
+      currentTermId: currentTerm?.id || null,
       currentTerm: currentTerm?.termNumber || null,
       profilePictureUrl: student.profilePictureUrl || "",
       bankDetails: school ? {

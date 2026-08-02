@@ -252,4 +252,59 @@ router.get(
   SchemeOfWorkController.getClassSchemes
 );
 
+/**
+ * @swagger
+ * /api/scheme-of-work/my:
+ *   get:
+ *     summary: Retrieve schemes of work for the authenticated student's class in the current active term
+ *     tags: [Scheme of Work]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Student's class schemes of work retrieved successfully
+ */
+router.get(
+  "/my",
+  authMiddleware(["Student"]),
+  requireSchoolId,
+  SchemeOfWorkController.getMySchemes
+);
+
+/**
+ * @swagger
+ * /api/scheme-of-work/my/term/{termId}:
+ *   get:
+ *     summary: Retrieve schemes of work for the authenticated student's class in a specific term
+ *     tags: [Scheme of Work]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Student's class schemes of work retrieved successfully
+ */
+router.get(
+  "/my/term/:termId",
+  authMiddleware(["Student"]),
+  requireSchoolId,
+  SchemeOfWorkController.getMySchemes
+);
+
 export default router;
