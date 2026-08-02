@@ -303,6 +303,8 @@ model Term {
   endDate           DateTime   @db.Date
   isCurrent         Boolean    @default(false)
   resultsPublished  Boolean    @default(false)
+  nextTermBegins    DateTime?  @db.Date
+  daysSchoolOpened  Int?
   createdAt         DateTime   @default(now())
 
   academicSession AcademicSession @relation(fields: [academicSessionId], references: [id], onDelete: Cascade)
@@ -400,6 +402,12 @@ model Result {
   status            ResultStatus @default(Draft)
   teacherComment    String       @default("") @db.VarChar(500)
   adminComment      String       @default("") @db.VarChar(500)
+  affectiveDomains  Json?        /// Ratings 1-5 for punctuality, neatness, politeness, honesty, cooperation, peerRelationship
+  psychomotorDomains Json?       /// Ratings 1-5 for handwriting, publicSpeaking, sports, clubParticipation, craftSkills, musicalSkill
+  daysSchoolOpened  Int?
+  daysPresent       Int?
+  nextTermBegins    DateTime?    @db.Date
+  promotedTo        String?      @db.VarChar(100)
   submittedAt       DateTime?
   approvedAt        DateTime?
   publishedAt       DateTime?

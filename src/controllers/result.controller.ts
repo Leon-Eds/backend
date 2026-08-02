@@ -158,4 +158,24 @@ export class ResultController {
       next(error);
     }
   }
+
+  static async updateResultMetadata(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { resultId } = req.params;
+
+      const result = await ResultService.updateResultMetadata(
+        schoolId,
+        resultId,
+        req.body
+      );
+
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

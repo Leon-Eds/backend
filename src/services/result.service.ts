@@ -2,6 +2,27 @@ import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
 import { FeeService } from "./fee.service";
 
+function formatDateWithOrdinal(dateInput: Date | string | null | undefined): string | null {
+  if (!dateInput) return null;
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return null;
+
+  const day = d.getDate();
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const month = monthNames[d.getMonth()];
+  const year = d.getFullYear();
+
+  let suffix = "th";
+  if (day % 10 === 1 && day !== 11) suffix = "st";
+  else if (day % 10 === 2 && day !== 12) suffix = "nd";
+  else if (day % 10 === 3 && day !== 13) suffix = "rd";
+
+  return `${day}${suffix} ${month} ${year}`;
+}
+
 export class ResultService {
 
   private static async resolveTeacher(schoolId: string, userId: string) {
@@ -233,18 +254,29 @@ export class ResultService {
       return failResponse("No results found to submit.");
     }
 
-    // Map individual student comments
-    const remarksMap = new Map((request.remarks || []).map((r: any) => [r.studentId, r.comment]));
+    // Map individual student comments and metadata (e.g. affective/psychomotor domains, attendance, promotion)
+    const studentDetailsList = request.studentDetails || request.remarks || [];
+    const studentDetailsMap = new Map(studentDetailsList.map((item: any) => [item.studentId, item]));
 
     const operations = results.map((result) => {
-      const comment = remarksMap.get(result.studentId) || "";
+      const detail = studentDetailsMap.get(result.studentId) || {};
+      const comment = detail.teacherComment || detail.formTeacherRemark || detail.comment || "";
+      const updateData: any = {
+        status: "Submitted",
+        teacherComment: comment,
+        submittedAt: new Date(),
+      };
+
+      if (detail.affectiveDomains) updateData.affectiveDomains = detail.affectiveDomains;
+      if (detail.psychomotorDomains) updateData.psychomotorDomains = detail.psychomotorDomains;
+      if (detail.daysSchoolOpened !== undefined) updateData.daysSchoolOpened = Number(detail.daysSchoolOpened);
+      if (detail.daysPresent !== undefined) updateData.daysPresent = Number(detail.daysPresent);
+      if (detail.nextTermBegins) updateData.nextTermBegins = new Date(detail.nextTermBegins);
+      if (detail.promotedTo) updateData.promotedTo = detail.promotedTo;
+
       return prisma.result.update({
         where: { id: result.id },
-        data: {
-          status: "Submitted",
-          teacherComment: comment,
-          submittedAt: new Date(),
-        },
+        data: updateData,
       });
     });
 
@@ -269,20 +301,26 @@ export class ResultService {
     }
 
     const now = new Date();
+    const adminComment = request.adminComment || request.principalsRemark || "";
 
     if (request.approve) {
+      const updateData: any = {
+        status: "Published",
+        adminComment,
+        approvedAt: now,
+        publishedAt: now,
+      };
+      if (request.nextTermBegins) updateData.nextTermBegins = new Date(request.nextTermBegins);
+      if (request.daysSchoolOpened !== undefined) updateData.daysSchoolOpened = Number(request.daysSchoolOpened);
+      if (request.promotedTo) updateData.promotedTo = request.promotedTo;
+
       await prisma.result.updateMany({
         where: {
           schoolId,
           classId,
           termId,
         },
-        data: {
-          status: "Published",
-          adminComment: request.adminComment || "",
-          approvedAt: now,
-          publishedAt: now,
-        },
+        data: updateData,
       });
     } else {
       await prisma.result.updateMany({
@@ -293,7 +331,7 @@ export class ResultService {
         },
         data: {
           status: "Draft",
-          adminComment: request.adminComment || "",
+          adminComment,
         },
       });
 
@@ -334,6 +372,49 @@ export class ResultService {
     return successResponse(true, "Results published. Students can now view their results.");
   }
 
+  static async updateResultMetadata(
+    schoolId: string,
+    resultId: string,
+    data: {
+      affectiveDomains?: any;
+      psychomotorDomains?: any;
+      daysSchoolOpened?: number;
+      daysPresent?: number;
+      nextTermBegins?: string;
+      promotedTo?: string;
+      teacherComment?: string;
+      adminComment?: string;
+      principalsRemark?: string;
+    }
+  ) {
+    const existing = await prisma.result.findFirst({
+      where: { id: resultId, schoolId },
+    });
+
+    if (!existing) {
+      return failResponse("Result record not found.");
+    }
+
+    const updateData: any = {};
+    if (data.affectiveDomains) updateData.affectiveDomains = data.affectiveDomains;
+    if (data.psychomotorDomains) updateData.psychomotorDomains = data.psychomotorDomains;
+    if (data.daysSchoolOpened !== undefined) updateData.daysSchoolOpened = Number(data.daysSchoolOpened);
+    if (data.daysPresent !== undefined) updateData.daysPresent = Number(data.daysPresent);
+    if (data.nextTermBegins) updateData.nextTermBegins = new Date(data.nextTermBegins);
+    if (data.promotedTo !== undefined) updateData.promotedTo = data.promotedTo;
+    if (data.teacherComment !== undefined) updateData.teacherComment = data.teacherComment;
+
+    const adminRemark = data.principalsRemark !== undefined ? data.principalsRemark : data.adminComment;
+    if (adminRemark !== undefined) updateData.adminComment = adminRemark;
+
+    const updated = await prisma.result.update({
+      where: { id: resultId },
+      data: updateData,
+    });
+
+    return successResponse(updated, "Result metadata updated successfully.");
+  }
+
   static async getClassResults(schoolId: string, classId: string, termId: string) {
     const classEntity = await prisma.class.findFirst({
       where: { id: classId, schoolId },
@@ -363,15 +444,46 @@ export class ResultService {
     const totalAverageSum = results.reduce((sum, r) => sum + Number(r.average), 0);
     const classAverage = results.length > 0 ? Math.round((totalAverageSum / results.length) * 100) / 100 : 0;
 
+    const defaultAffective = {
+      punctuality: 5,
+      neatness: 5,
+      politeness: 5,
+      honesty: 5,
+      cooperation: 5,
+      peerRelationship: 5,
+    };
+
+    const defaultPsychomotor = {
+      handwriting: 5,
+      publicSpeaking: 5,
+      sports: 5,
+      clubParticipation: 5,
+      craftSkills: 5,
+      musicalSkill: 5,
+    };
+
     const studentsMapped = results.map((r) => ({
+      resultId: r.id,
       studentId: r.studentId,
       studentName: r.student.fullName,
       admissionNumber: r.student.admissionNumber,
+      gender: r.student.gender,
+      dateOfBirth: formatDateWithOrdinal(r.student.dateOfBirth),
       totalScore: Number(r.totalScore),
       average: Number(r.average),
       position: r.position,
       subjectCount: r.subjectCount,
       status: r.status,
+      teacherComment: r.teacherComment,
+      formTeacherRemark: r.teacherComment,
+      adminComment: r.adminComment,
+      principalsRemark: r.adminComment || "",
+      daysSchoolOpened: r.daysSchoolOpened ?? term.daysSchoolOpened ?? 0,
+      daysPresent: r.daysPresent ?? 0,
+      nextTermBegins: formatDateWithOrdinal(r.nextTermBegins ?? term.nextTermBegins),
+      promotedTo: r.promotedTo || null,
+      affectiveDomains: r.affectiveDomains || defaultAffective,
+      psychomotorDomains: r.psychomotorDomains || defaultPsychomotor,
     }));
 
     return successResponse({
@@ -416,20 +528,92 @@ export class ResultService {
       },
     });
 
-    const subjectScoresMapped = scores.map((s) => ({
-      id: s.id,
-      studentId: s.studentId,
-      studentName: result.student.fullName,
-      admissionNumber: result.student.admissionNumber,
-      subjectId: s.subjectId,
-      subjectName: s.subject.name,
-      firstCA: Number(s.firstCA),
-      secondCA: Number(s.secondCA),
-      exam: Number(s.exam),
-      total: Number(s.total),
-      grade: s.grade,
-      remark: s.remark,
-    }));
+    // Compute subject-level stats (classAvg, high, low) across class
+    const allClassScores = await prisma.score.findMany({
+      where: { schoolId, classId: result.classId, termId },
+      select: { subjectId: true, total: true },
+    });
+
+    const subjectScoresMap = new Map<string, number[]>();
+    for (const sc of allClassScores) {
+      const arr = subjectScoresMap.get(sc.subjectId) || [];
+      arr.push(Number(sc.total));
+      subjectScoresMap.set(sc.subjectId, arr);
+    }
+
+    const subjectStatsMap = new Map<string, { classAvg: number; high: number; low: number }>();
+    for (const [subId, totals] of subjectScoresMap.entries()) {
+      const sum = totals.reduce((a, b) => a + b, 0);
+      const classAvg = totals.length > 0 ? Math.round((sum / totals.length) * 100) / 100 : 0;
+      const high = totals.length > 0 ? Math.max(...totals) : 0;
+      const low = totals.length > 0 ? Math.min(...totals) : 0;
+      subjectStatsMap.set(subId, { classAvg, high, low });
+    }
+
+    const subjectScoresMapped = scores.map((s) => {
+      const stats = subjectStatsMap.get(s.subjectId) || {
+        classAvg: Number(s.total),
+        high: Number(s.total),
+        low: Number(s.total),
+      };
+      return {
+        id: s.id,
+        studentId: s.studentId,
+        studentName: result.student.fullName,
+        admissionNumber: result.student.admissionNumber,
+        subjectId: s.subjectId,
+        subjectName: s.subject.name,
+        firstCA: Number(s.firstCA),
+        secondCA: Number(s.secondCA),
+        exam: Number(s.exam),
+        total: Number(s.total),
+        grade: s.grade,
+        remark: s.remark,
+        classAvg: stats.classAvg,
+        high: stats.high,
+        low: stats.low,
+      };
+    });
+
+    // Attendance calculation if not explicitly set
+    let daysPresent = result.daysPresent;
+    if (daysPresent === null || daysPresent === undefined) {
+      daysPresent = await prisma.attendance.count({
+        where: { schoolId, studentId, classId: result.classId, status: "Present" },
+      });
+    }
+
+    let daysSchoolOpened = result.daysSchoolOpened;
+    if (daysSchoolOpened === null || daysSchoolOpened === undefined) {
+      daysSchoolOpened = result.term.daysSchoolOpened || 0;
+      if (daysSchoolOpened === 0) {
+        const uniqueDates = await prisma.attendance.groupBy({
+          by: ["date"],
+          where: { schoolId, classId: result.classId },
+        });
+        daysSchoolOpened = uniqueDates.length;
+      }
+    }
+
+    const nextTermBegins = formatDateWithOrdinal(result.nextTermBegins || result.term.nextTermBegins);
+
+    const defaultAffective = {
+      punctuality: 5,
+      neatness: 5,
+      politeness: 5,
+      honesty: 5,
+      cooperation: 5,
+      peerRelationship: 5,
+    };
+
+    const defaultPsychomotor = {
+      handwriting: 5,
+      publicSpeaking: 5,
+      sports: 5,
+      clubParticipation: 5,
+      craftSkills: 5,
+      musicalSkill: 5,
+    };
 
     return successResponse({
       resultId: result.id,
@@ -446,7 +630,28 @@ export class ResultService {
       totalStudentsInClass: totalInClass,
       status: result.status,
       teacherComment: result.teacherComment,
+      formTeacherRemark: result.teacherComment,
       adminComment: result.adminComment,
+      principalsRemark: result.adminComment || "",
+
+      // 1. Student Profile Extensions
+      gender: result.student.gender,
+      dateOfBirth: formatDateWithOrdinal(result.student.dateOfBirth),
+
+      // 2. Term Metadata
+      daysSchoolOpened,
+      daysPresent,
+      nextTermBegins,
+      promotedTo: result.promotedTo || null,
+
+      // 4. Remarks
+      // (principalsRemark and teacherComment / formTeacherRemark included above)
+
+      // 5. Domains (Rated 1-5)
+      affectiveDomains: result.affectiveDomains || defaultAffective,
+      psychomotorDomains: result.psychomotorDomains || defaultPsychomotor,
+
+      // 3. Subject-Level Stats
       subjectScores: subjectScoresMapped,
     }, "Student result retrieved.");
   }
