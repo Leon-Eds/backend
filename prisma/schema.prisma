@@ -131,6 +131,7 @@ model School {
   attendances      Attendance[]
   parents          Parent[]
   subscriptionPayments SubscriptionPaymentLog[]
+  schemesOfWork    SchemeOfWork[]
 }
 
 model User {
@@ -229,6 +230,7 @@ model Teacher {
   enteredScores      Score[]
   formClasses        Class[]                   @relation("ClassFormTeacher")
   takenAttendances   Attendance[]
+  schemesOfWork      SchemeOfWork[]
 
   @@index([schoolId])
 }
@@ -253,6 +255,7 @@ model Class {
   scores             Score[]
   results            Result[]
   attendances        Attendance[]
+  schemesOfWork      SchemeOfWork[]
 
   @@index([schoolId])
 }
@@ -268,6 +271,7 @@ model Subject {
   teacherAssignments TeacherSubjectAssignment[]
   classSubjects      ClassSubject[]
   scores             Score[]
+  schemesOfWork      SchemeOfWork[]
 
   @@unique([schoolId, name])
 }
@@ -305,6 +309,7 @@ model Term {
   scores          Score[]
   results         Result[]
   feePayments     FeePayment[]
+  schemesOfWork   SchemeOfWork[]
 
   @@unique([academicSessionId, termNumber])
 }
@@ -518,4 +523,25 @@ model SubscriptionPaymentLog {
   @@index([schoolId])
   @@index([planId])
   @@index([paidAt])
+}
+
+model SchemeOfWork {
+  id        String    @id @default(uuid()) @db.Uuid
+  schoolId  String    @db.Uuid
+  classId   String    @db.Uuid
+  subjectId String    @db.Uuid
+  termId    String    @db.Uuid
+  teacherId String    @db.Uuid
+  topics    Json      /// Array of { week: number, topic: string, description?: string }
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, classId, subjectId, termId])
+  @@index([schoolId, classId, termId])
 }
