@@ -259,7 +259,7 @@ export class ResultService {
     const studentDetailsMap = new Map(studentDetailsList.map((item: any) => [item.studentId, item]));
 
     const operations = results.map((result) => {
-      const detail = studentDetailsMap.get(result.studentId) || {};
+      const detail: any = studentDetailsMap.get(result.studentId) || {};
       const comment = detail.teacherComment || detail.formTeacherRemark || detail.comment || "";
       const updateData: any = {
         status: "Submitted",

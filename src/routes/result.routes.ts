@@ -365,6 +365,64 @@ router.get("/editing-status/:classId", authMiddleware(["SchoolAdmin", "Teacher"]
 
 /**
  * @swagger
+ * /api/result/metadata/{resultId}:
+ *   patch:
+ *     summary: Update student result metadata (domain ratings 1-5, attendance, next term date, promotion status, comments)
+ *     tags: [Results]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: resultId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The result ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               affectiveDomains:
+ *                 type: object
+ *                 properties:
+ *                   punctuality: { type: integer, example: 5 }
+ *                   neatness: { type: integer, example: 5 }
+ *                   politeness: { type: integer, example: 4 }
+ *                   honesty: { type: integer, example: 5 }
+ *                   cooperation: { type: integer, example: 4 }
+ *                   peerRelationship: { type: integer, example: 5 }
+ *               psychomotorDomains:
+ *                 type: object
+ *                 properties:
+ *                   handwriting: { type: integer, example: 4 }
+ *                   publicSpeaking: { type: integer, example: 3 }
+ *                   sports: { type: integer, example: 5 }
+ *                   clubParticipation: { type: integer, example: 4 }
+ *                   craftSkills: { type: integer, example: 4 }
+ *                   musicalSkill: { type: integer, example: 3 }
+ *               daysSchoolOpened: { type: integer, example: 65 }
+ *               daysPresent: { type: integer, example: 62 }
+ *               nextTermBegins: { type: string, example: "2026-09-15" }
+ *               promotedTo: { type: string, example: "Senior Secondary 3" }
+ *               teacherComment: { type: string, example: "Excellent progress this term." }
+ *               principalsRemark: { type: string, example: "Promoted to next level. Outstanding performance." }
+ *     responses:
+ *       200:
+ *         description: Result metadata updated successfully
+ */
+router.patch("/metadata/:resultId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.updateResultMetadata);
+
+/**
+ * @swagger
  * /api/result/my/term/{termId}:
  *   get:
  *     summary: Retrieve the authenticated student's results
