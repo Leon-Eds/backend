@@ -27,6 +27,10 @@ export class SchoolService {
       bankAccountName: school.bankAccountName || "",
       bankName: school.bankName || "",
       bankAccountNumber: school.bankAccountNumber || "",
+      motto: school.motto || "",
+      website: school.website || "",
+      principalName: school.principalName || "",
+      principalSignatureUrl: school.principalSignatureUrl || "",
     };
   }
 
@@ -105,6 +109,10 @@ export class SchoolService {
         bankAccountName: request.bankAccountName !== undefined ? request.bankAccountName : undefined,
         bankName: request.bankName !== undefined ? request.bankName : undefined,
         bankAccountNumber: request.bankAccountNumber !== undefined ? request.bankAccountNumber : undefined,
+        motto: request.motto !== undefined ? request.motto : undefined,
+        website: request.website !== undefined ? request.website : undefined,
+        principalName: request.principalName !== undefined ? request.principalName : undefined,
+        principalSignatureUrl: request.principalSignatureUrl !== undefined ? request.principalSignatureUrl : undefined,
       },
       include: {
         teachers: { select: { isActive: true } },

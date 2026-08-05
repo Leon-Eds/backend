@@ -66,4 +66,46 @@ export class TeacherPortalController {
       next(error);
     }
   }
+
+  static async updateSignature(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const { signatureUrl } = req.body;
+      const result = await TeacherPortalService.updateTeacherSignature(schoolId, userId, signatureUrl);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getFormClassDomains(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const classId = String(req.query.classId || "");
+      const termId = String(req.query.termId || "");
+
+      if (!classId || !termId) {
+        return res.status(400).json({ success: false, message: "classId and termId are required query parameters." });
+      }
+
+      const result = await TeacherPortalService.getFormClassDomains(schoolId, userId, classId, termId);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateStudentDomains(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const { studentId } = req.params;
+      const result = await TeacherPortalService.updateStudentDomains(schoolId, userId, studentId, req.body);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

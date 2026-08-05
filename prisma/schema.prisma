@@ -114,6 +114,10 @@ model School {
   bankAccountName          String?      @db.VarChar(200)
   bankName                 String?      @db.VarChar(150)
   bankAccountNumber        String?      @db.VarChar(50)
+  motto                    String?      @default("") @db.VarChar(250)
+  website                  String?      @default("") @db.VarChar(250)
+  principalName            String?      @default("") @db.VarChar(200)
+  principalSignatureUrl    String?      @default("") @db.VarChar(500)
 
   plan             PaymentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 
@@ -219,6 +223,7 @@ model Teacher {
   email             String    @default("") @db.VarChar(200)
   phone             String    @default("") @db.VarChar(30)
   profilePictureUrl String    @default("") @db.VarChar(500)
+  signatureUrl      String?   @default("") @db.VarChar(500)
   isActive          Boolean   @default(true)
   suspendedBySubscription Boolean @default(false)
   createdAt         DateTime  @default(now())

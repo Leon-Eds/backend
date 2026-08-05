@@ -195,6 +195,102 @@ router.get("/classes/:classId/students", TeacherPortalController.getMyClassStude
  *       400:
  *         description: Missing required query params or teacher not assigned
  */
+import { validateBody } from "../middlewares/validation.middleware";
+import { updateTeacherSignatureSchema, updateStudentDomainsSchema } from "../validations/teacher-portal.validation";
+
 router.get("/score-progress", TeacherPortalController.getScoreProgress);
+
+/**
+ * @swagger
+ * /api/teacher-portal/signature:
+ *   put:
+ *     summary: Upload/update teacher signature URL
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - signatureUrl
+ *             properties:
+ *               signatureUrl:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Signature updated successfully
+ */
+router.put("/signature", validateBody(updateTeacherSignatureSchema), TeacherPortalController.updateSignature);
+
+/**
+ * @swagger
+ * /api/teacher-portal/form-class/students-domains:
+ *   get:
+ *     summary: Get student domain ratings for a form class and term
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: classId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Form class student domain ratings retrieved successfully
+ */
+router.get("/form-class/students-domains", TeacherPortalController.getFormClassDomains);
+
+/**
+ * @swagger
+ * /api/teacher-portal/form-class/students/{studentId}/domains:
+ *   put:
+ *     summary: Record/update student behavioral & psychological (affective & psychomotor) domains and remarks
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - termId
+ *             properties:
+ *               termId:
+ *                 type: string
+ *               affectiveDomains:
+ *                 type: object
+ *               psychomotorDomains:
+ *                 type: object
+ *               formTeacherRemark:
+ *                 type: string
+ *               daysPresent:
+ *                 type: integer
+ *               daysSchoolOpened:
+ *                 type: integer
+ *               promotedTo:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Student domain ratings updated successfully
+ */
+router.put("/form-class/students/:studentId/domains", validateBody(updateStudentDomainsSchema), TeacherPortalController.updateStudentDomains);
 
 export default router;

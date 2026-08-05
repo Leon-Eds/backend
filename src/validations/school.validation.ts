@@ -15,6 +15,10 @@ export const updateSchoolSchema = z.object({
   bankAccountName: z.string().max(200).optional(),
   bankName: z.string().max(150).optional(),
   bankAccountNumber: z.string().max(50).optional(),
+  motto: z.string().max(250).optional(),
+  website: z.string().max(250).optional(),
+  principalName: z.string().max(200).optional(),
+  principalSignatureUrl: z.string().max(500).optional(),
 });
 
 export const updateSchoolPlanSchema = z.object({

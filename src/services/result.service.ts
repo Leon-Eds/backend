@@ -503,7 +503,11 @@ export class ResultService {
       where: { schoolId, studentId, termId },
       include: {
         student: true,
-        class: true,
+        class: {
+          include: {
+            formTeacher: true,
+          },
+        },
         term: {
           include: { academicSession: true },
         },
@@ -513,6 +517,10 @@ export class ResultService {
     if (!result) {
       return failResponse("Result not found.");
     }
+
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+    });
 
     const totalInClass = await prisma.result.count({
       where: { schoolId, classId: result.classId, termId },
@@ -615,11 +623,30 @@ export class ResultService {
       musicalSkill: 5,
     };
 
+    const schoolInfo = {
+      name: school?.name || "",
+      address: school?.address || "",
+      contactEmail: school?.contactEmail || "",
+      contactPhone: school?.contactPhone || "",
+      logoUrl: school?.logoUrl || "",
+      motto: school?.motto || "",
+      website: school?.website || "",
+      principalName: school?.principalName || "",
+      principalSignatureUrl: school?.principalSignatureUrl || "",
+    };
+
+    const formTeacherInfo = {
+      name: result.class?.formTeacher?.fullName || "",
+      signatureUrl: result.class?.formTeacher?.signatureUrl || "",
+    };
+
     return successResponse({
       resultId: result.id,
       studentId: result.studentId,
       studentName: result.student.fullName,
       admissionNumber: result.student.admissionNumber,
+      passportUrl: result.student.profilePictureUrl || "",
+      profilePictureUrl: result.student.profilePictureUrl || "",
       className: result.class ? `${result.class.name} ${result.class.arm}`.trim() : "",
       termName: result.term.termNumber,
       sessionName: result.term.academicSession.name,
@@ -634,6 +661,15 @@ export class ResultService {
       adminComment: result.adminComment,
       principalsRemark: result.adminComment || "",
 
+      // School & Principal Metadata
+      schoolInfo,
+      principalName: schoolInfo.principalName,
+      principalSignatureUrl: schoolInfo.principalSignatureUrl,
+
+      // Teacher Signature Metadata
+      formTeacherInfo,
+      formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
+
       // 1. Student Profile Extensions
       gender: result.student.gender,
       dateOfBirth: formatDateWithOrdinal(result.student.dateOfBirth),
@@ -643,9 +679,6 @@ export class ResultService {
       daysPresent,
       nextTermBegins,
       promotedTo: result.promotedTo || null,
-
-      // 4. Remarks
-      // (principalsRemark and teacherComment / formTeacherRemark included above)
 
       // 5. Domains (Rated 1-5)
       affectiveDomains: result.affectiveDomains || defaultAffective,

@@ -324,4 +324,197 @@ export class TeacherPortalService {
       examProgress,
     }, "Score entry progress retrieved.");
   }
+
+  /**
+   * PUT /api/teacher-portal/signature
+   * Allows the logged-in teacher to update their signature URL string.
+   */
+  static async updateTeacherSignature(schoolId: string, userId: string, signatureUrl: string) {
+    const teacher = await this.resolveTeacher(schoolId, userId);
+    if (!teacher) return failResponse("Teacher profile not found.");
+
+    const updated = await prisma.teacher.update({
+      where: { id: teacher.id },
+      data: { signatureUrl },
+    });
+
+    return successResponse({
+      teacherId: updated.id,
+      fullName: updated.fullName,
+      signatureUrl: updated.signatureUrl,
+    }, "Teacher signature updated successfully.");
+  }
+
+  /**
+   * GET /api/teacher-portal/form-class/students-domains
+   * Gets all active students in the form teacher's class with their domain ratings and remarks for a given term.
+   */
+  static async getFormClassDomains(schoolId: string, userId: string, classId: string, termId: string) {
+    const teacher = await this.resolveTeacher(schoolId, userId);
+    if (!teacher) return failResponse("Teacher profile not found.");
+
+    const classEntity = await prisma.class.findFirst({
+      where: { id: classId, schoolId },
+    });
+
+    if (!classEntity) return failResponse("Class not found.");
+    if (classEntity.formTeacherId !== teacher.id) {
+      return failResponse("Access Denied: You are not the assigned Form Teacher for this class.");
+    }
+
+    const students = await prisma.student.findMany({
+      where: { schoolId, classId, status: "Active" },
+      orderBy: { fullName: "asc" },
+      select: {
+        id: true,
+        fullName: true,
+        admissionNumber: true,
+        gender: true,
+        profilePictureUrl: true,
+      },
+    });
+
+    const results = await prisma.result.findMany({
+      where: { schoolId, classId, termId },
+    });
+
+    const resultMap = new Map(results.map((r) => [r.studentId, r]));
+
+    const defaultAffective = {
+      punctuality: 5,
+      neatness: 5,
+      politeness: 5,
+      honesty: 5,
+      cooperation: 5,
+      peerRelationship: 5,
+    };
+
+    const defaultPsychomotor = {
+      handwriting: 5,
+      publicSpeaking: 5,
+      sports: 5,
+      clubParticipation: 5,
+      craftSkills: 5,
+      musicalSkill: 5,
+    };
+
+    const items = students.map((s) => {
+      const res = resultMap.get(s.id);
+      return {
+        studentId: s.id,
+        fullName: s.fullName,
+        admissionNumber: s.admissionNumber,
+        gender: s.gender,
+        profilePictureUrl: s.profilePictureUrl,
+        resultId: res?.id || null,
+        affectiveDomains: res?.affectiveDomains || defaultAffective,
+        psychomotorDomains: res?.psychomotorDomains || defaultPsychomotor,
+        teacherComment: res?.teacherComment || "",
+        formTeacherRemark: res?.teacherComment || "",
+        daysPresent: res?.daysPresent ?? 0,
+        daysSchoolOpened: res?.daysSchoolOpened ?? null,
+        promotedTo: res?.promotedTo || "",
+      };
+    });
+
+    return successResponse({
+      classId: classEntity.id,
+      className: `${classEntity.name} ${classEntity.arm}`.trim(),
+      termId,
+      students: items,
+    }, "Form class student domain records retrieved.");
+  }
+
+  /**
+   * PUT /api/teacher-portal/form-class/students/:studentId/domains
+   * Allows Form Teachers to record/update student affective & psychomotor domains and remarks.
+   */
+  static async updateStudentDomains(
+    schoolId: string,
+    userId: string,
+    studentId: string,
+    payload: {
+      termId: string;
+      affectiveDomains?: any;
+      psychomotorDomains?: any;
+      teacherComment?: string;
+      formTeacherRemark?: string;
+      daysPresent?: number;
+      daysSchoolOpened?: number;
+      promotedTo?: string;
+    }
+  ) {
+    const teacher = await this.resolveTeacher(schoolId, userId);
+    if (!teacher) return failResponse("Teacher profile not found.");
+
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, schoolId },
+      include: { class: true },
+    });
+
+    if (!student || !student.classId) {
+      return failResponse("Student or student class profile not found.");
+    }
+
+    if (student.class?.formTeacherId !== teacher.id) {
+      return failResponse("Access Denied: Only the assigned Form Teacher of this student's class can edit domain ratings.");
+    }
+
+    const term = await prisma.term.findFirst({
+      where: { id: payload.termId },
+    });
+
+    if (!term) return failResponse("Term not found.");
+
+    const existingResult = await prisma.result.findFirst({
+      where: { schoolId, studentId, termId: payload.termId },
+    });
+
+    const comment = payload.formTeacherRemark !== undefined ? payload.formTeacherRemark : payload.teacherComment;
+
+    const updateData: any = {};
+    if (payload.affectiveDomains) updateData.affectiveDomains = payload.affectiveDomains;
+    if (payload.psychomotorDomains) updateData.psychomotorDomains = payload.psychomotorDomains;
+    if (comment !== undefined) updateData.teacherComment = comment;
+    if (payload.daysPresent !== undefined) updateData.daysPresent = payload.daysPresent;
+    if (payload.daysSchoolOpened !== undefined) updateData.daysSchoolOpened = payload.daysSchoolOpened;
+    if (payload.promotedTo !== undefined) updateData.promotedTo = payload.promotedTo;
+
+    let updatedResult;
+    if (existingResult) {
+      updatedResult = await prisma.result.update({
+        where: { id: existingResult.id },
+        data: updateData,
+      });
+    } else {
+      updatedResult = await prisma.result.create({
+        data: {
+          schoolId,
+          studentId,
+          classId: student.classId,
+          termId: payload.termId,
+          academicSessionId: term.academicSessionId,
+          totalScore: 0,
+          average: 0,
+          classAverage: 0,
+          position: 0,
+          subjectCount: 0,
+          status: "Draft",
+          ...updateData,
+        },
+      });
+    }
+
+    return successResponse({
+      resultId: updatedResult.id,
+      studentId: updatedResult.studentId,
+      affectiveDomains: updatedResult.affectiveDomains,
+      psychomotorDomains: updatedResult.psychomotorDomains,
+      teacherComment: updatedResult.teacherComment,
+      formTeacherRemark: updatedResult.teacherComment,
+      daysPresent: updatedResult.daysPresent,
+      daysSchoolOpened: updatedResult.daysSchoolOpened,
+      promotedTo: updatedResult.promotedTo,
+    }, "Student domain ratings and remarks updated successfully.");
+  }
 }
