@@ -2,11 +2,13 @@ import { prisma } from "../config/db";
 import { GradingService } from "./grading.service";
 import { TeacherPortalService } from "./teacher-portal.service";
 import { successResponse, failResponse } from "../utils/response";
+import { formatOrdinal } from "../utils/ordinal";
 import { NotificationService } from "./notification.service";
 import { ResultService } from "./result.service";
 
 export class ScoreService {
   private static mapToResponse(s: any, student: any, subjectName: string) {
+    const pos = s.subjectPosition || 0;
     return {
       id: s.id,
       studentId: s.studentId,
@@ -19,10 +21,11 @@ export class ScoreService {
       exam: Number(s.exam),
       total: Number(s.total),
       grade: s.grade,
-      remark: s.remark,
-      subjectPosition: s.subjectPosition || 0,
+      remark: formatOrdinal(pos),
+      subjectPosition: pos,
     };
   }
+
 
   /**
    * Compute and update subject positions (rank by total descending) for all scores in a class+subject+term
@@ -339,20 +342,24 @@ export class ScoreService {
       },
     });
 
-    const scoresMapped = scores.map((s) => ({
-      id: s.id,
-      studentId: s.studentId,
-      studentName: s.student.fullName,
-      admissionNumber: s.student.admissionNumber,
-      subjectId: s.subjectId,
-      subjectName: subject.name,
-      firstCA: Number(s.firstCA),
-      secondCA: Number(s.secondCA),
-      exam: Number(s.exam),
-      total: Number(s.total),
-      grade: s.grade,
-      remark: s.remark,
-    }));
+    const scoresMapped = scores.map((s) => {
+      const pos = s.subjectPosition || 0;
+      return {
+        id: s.id,
+        studentId: s.studentId,
+        studentName: s.student.fullName,
+        admissionNumber: s.student.admissionNumber,
+        subjectId: s.subjectId,
+        subjectName: subject.name,
+        firstCA: Number(s.firstCA),
+        secondCA: Number(s.secondCA),
+        exam: Number(s.exam),
+        total: Number(s.total),
+        grade: s.grade,
+        remark: formatOrdinal(pos),
+        subjectPosition: pos,
+      };
+    });
 
     return successResponse({
       classId: classEntity.id,
@@ -390,23 +397,28 @@ export class ScoreService {
       },
     });
 
-    const response = scores.map((s) => ({
-      id: s.id,
-      studentId: s.studentId,
-      studentName: student.fullName,
-      admissionNumber: student.admissionNumber,
-      subjectId: s.subjectId,
-      subjectName: s.subject.name,
-      firstCA: Number(s.firstCA),
-      secondCA: Number(s.secondCA),
-      exam: Number(s.exam),
-      total: Number(s.total),
-      grade: s.grade,
-      remark: s.remark,
-    }));
+    const response = scores.map((s) => {
+      const pos = s.subjectPosition || 0;
+      return {
+        id: s.id,
+        studentId: s.studentId,
+        studentName: student.fullName,
+        admissionNumber: student.admissionNumber,
+        subjectId: s.subjectId,
+        subjectName: s.subject.name,
+        firstCA: Number(s.firstCA),
+        secondCA: Number(s.secondCA),
+        exam: Number(s.exam),
+        total: Number(s.total),
+        grade: s.grade,
+        remark: formatOrdinal(pos),
+        subjectPosition: pos,
+      };
+    });
 
     return successResponse(response, "Student scores retrieved.");
   }
+
 
   private static async notifyFormTeacherIfComplete(schoolId: string, classId: string, termId: string) {
     try {
