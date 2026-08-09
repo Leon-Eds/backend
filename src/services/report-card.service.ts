@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
 import { GradingService } from "./grading.service";
+import { formatOrdinal } from "../utils/ordinal";
 
 export class ReportCardService {
   static async generateReportCard(schoolId: string, studentId: string, termId: string) {
@@ -42,6 +43,19 @@ export class ReportCardService {
       },
     });
 
+    // Fetch all class scores for term to calculate fallback rank if s.subjectPosition is 0
+    const allClassScores = await prisma.score.findMany({
+      where: { schoolId, classId: result.classId, termId },
+      select: { subjectId: true, total: true },
+    });
+
+    const subjectTotalsMap = new Map<string, number[]>();
+    for (const sc of allClassScores) {
+      const arr = subjectTotalsMap.get(sc.subjectId) || [];
+      arr.push(Number(sc.total));
+      subjectTotalsMap.set(sc.subjectId, arr);
+    }
+
     const gradingRulesResult = await GradingService.getGradingRules(schoolId);
 
     const reportCard = {
@@ -65,21 +79,30 @@ export class ReportCardService {
       teacherComment: result.teacherComment,
       adminComment: result.adminComment,
       studentPictureUrl: result.student.profilePictureUrl || "",
-      subjectScores: scores.map((s) => ({
-        id: s.id,
-        studentId: s.studentId,
-        studentName: result.student.fullName,
-        admissionNumber: result.student.admissionNumber,
-        subjectId: s.subjectId,
-        subjectName: s.subject.name,
-        firstCA: Number(s.firstCA),
-        secondCA: Number(s.secondCA),
-        exam: Number(s.exam),
-        total: Number(s.total),
-        grade: s.grade,
-        remark: s.remark,
-        subjectPosition: s.subjectPosition || 0,
-      })),
+      subjectScores: scores.map((s) => {
+        let pos = s.subjectPosition || 0;
+        if (pos === 0) {
+          const totals = subjectTotalsMap.get(s.subjectId) || [];
+          const higherCount = totals.filter((t) => t > Number(s.total)).length;
+          pos = higherCount + 1;
+        }
+        return {
+          id: s.id,
+          studentId: s.studentId,
+          studentName: result.student.fullName,
+          admissionNumber: result.student.admissionNumber,
+          subjectId: s.subjectId,
+          subjectName: s.subject.name,
+          firstCA: Number(s.firstCA),
+          secondCA: Number(s.secondCA),
+          exam: Number(s.exam),
+          total: Number(s.total),
+          grade: s.grade,
+          remark: formatOrdinal(pos),
+          subjectPosition: pos,
+        };
+      }),
+
       gradingKey: (gradingRulesResult.data || []).map((g: any) => ({
         grade: g.grade,
         minScore: g.minScore,

@@ -1,6 +1,8 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
 import { FeeService } from "./fee.service";
+import { formatOrdinal } from "../utils/ordinal";
+
 
 function formatDateWithOrdinal(dateInput: Date | string | null | undefined): string | null {
   if (!dateInput) return null;
@@ -564,6 +566,14 @@ export class ResultService {
         high: Number(s.total),
         low: Number(s.total),
       };
+
+      let pos = s.subjectPosition || 0;
+      if (pos === 0) {
+        const totals = subjectScoresMap.get(s.subjectId) || [];
+        const higherCount = totals.filter((t) => t > Number(s.total)).length;
+        pos = higherCount + 1;
+      }
+
       return {
         id: s.id,
         studentId: s.studentId,
@@ -576,12 +586,14 @@ export class ResultService {
         exam: Number(s.exam),
         total: Number(s.total),
         grade: s.grade,
-        remark: s.remark,
+        remark: formatOrdinal(pos),
+        subjectPosition: pos,
         classAvg: stats.classAvg,
         high: stats.high,
         low: stats.low,
       };
     });
+
 
     // Attendance calculation if not explicitly set
     let daysPresent = result.daysPresent;
