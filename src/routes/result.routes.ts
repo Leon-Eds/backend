@@ -178,6 +178,79 @@ router.post("/publish/:classId/:termId", authMiddleware(["SchoolAdmin"]), requir
 
 /**
  * @swagger
+ * /api/result/approved/term/{termId}:
+ *   get:
+ *     summary: Get all school-admin approved/published class results for a term (SchoolAdmin/Teacher)
+ *     description: >
+ *       Retrieves class results that have been approved or published by the school admin in a particular term.
+ *       Optionally filter by classId using query parameter.
+ *     tags: [Results]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The term ID
+ *       - in: query
+ *         name: classId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional class ID to filter approved results for a specific class
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Approved class results for term retrieved successfully
+ *       400:
+ *         description: Term not found or invalid request
+ */
+router.get("/approved/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.getApprovedResultsByTerm);
+
+/**
+ * @swagger
+ * /api/result/approved/class/{classId}/term/{termId}:
+ *   get:
+ *     summary: Get approved/published class results for a specific class in a term (SchoolAdmin/Teacher)
+ *     tags: [Results]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: classId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The class ID
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The term ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Approved class results retrieved successfully
+ *       400:
+ *         description: No approved/published results found or invalid parameters
+ */
+router.get("/approved/class/:classId/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.getApprovedClassResults);
+
+/**
+ * @swagger
  * /api/result/class/{classId}/term/{termId}:
  *   get:
  *     summary: Get all class results (SchoolAdmin/Teacher)
@@ -208,6 +281,7 @@ router.post("/publish/:classId/:termId", authMiddleware(["SchoolAdmin"]), requir
  *         description: Class results retrieved successfully
  */
 router.get("/class/:classId/term/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.getClassResults);
+
 
 /**
  * @swagger

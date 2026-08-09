@@ -793,4 +793,219 @@ export class ResultService {
       "Result editing status retrieved."
     );
   }
+
+  static async getApprovedClassResults(schoolId: string, classId: string, termId: string) {
+    const classEntity = await prisma.class.findFirst({
+      where: { id: classId, schoolId },
+    });
+
+    if (!classEntity) {
+      return failResponse("Class not found.");
+    }
+
+    const term = await prisma.term.findFirst({
+      where: { id: termId },
+      include: { academicSession: true },
+    });
+
+    if (!term) {
+      return failResponse("Term not found.");
+    }
+
+    const results = await prisma.result.findMany({
+      where: {
+        schoolId,
+        classId,
+        termId,
+        status: { in: ["Approved", "Published"] },
+      },
+      include: { student: true },
+      orderBy: { position: "asc" },
+    });
+
+    if (results.length === 0) {
+      return failResponse("No approved or published results found for this class and term.");
+    }
+
+    const statusGroup = results[0]?.status || "Approved";
+
+    const totalAverageSum = results.reduce((sum, r) => sum + Number(r.average), 0);
+    const classAverage = results.length > 0 ? Math.round((totalAverageSum / results.length) * 100) / 100 : 0;
+
+    const defaultAffective = {
+      punctuality: 5,
+      neatness: 5,
+      politeness: 5,
+      honesty: 5,
+      cooperation: 5,
+      peerRelationship: 5,
+    };
+
+    const defaultPsychomotor = {
+      handwriting: 5,
+      publicSpeaking: 5,
+      sports: 5,
+      clubParticipation: 5,
+      craftSkills: 5,
+      musicalSkill: 5,
+    };
+
+    const studentsMapped = results.map((r) => ({
+      resultId: r.id,
+      studentId: r.studentId,
+      studentName: r.student.fullName,
+      admissionNumber: r.student.admissionNumber,
+      gender: r.student.gender,
+      dateOfBirth: formatDateWithOrdinal(r.student.dateOfBirth),
+      totalScore: Number(r.totalScore),
+      average: Number(r.average),
+      position: r.position,
+      subjectCount: r.subjectCount,
+      status: r.status,
+      teacherComment: r.teacherComment,
+      formTeacherRemark: r.teacherComment,
+      adminComment: r.adminComment,
+      principalsRemark: r.adminComment || "",
+      daysSchoolOpened: r.daysSchoolOpened ?? term.daysSchoolOpened ?? 0,
+      daysPresent: r.daysPresent ?? 0,
+      nextTermBegins: formatDateWithOrdinal(r.nextTermBegins ?? term.nextTermBegins),
+      promotedTo: r.promotedTo || null,
+      affectiveDomains: r.affectiveDomains || defaultAffective,
+      psychomotorDomains: r.psychomotorDomains || defaultPsychomotor,
+    }));
+
+    return successResponse({
+      classId: classEntity.id,
+      className: `${classEntity.name} ${classEntity.arm}`.trim(),
+      termName: term.termNumber,
+      sessionName: term.academicSession.name,
+      status: statusGroup,
+      totalStudents: results.length,
+      classAverage,
+      students: studentsMapped,
+    }, "Approved class results retrieved successfully.");
+  }
+
+  static async getApprovedResultsByTerm(schoolId: string, termId: string, classId?: string) {
+    const term = await prisma.term.findFirst({
+      where: { id: termId },
+      include: { academicSession: true },
+    });
+
+    if (!term) {
+      return failResponse("Term not found.");
+    }
+
+    const whereCondition: any = {
+      schoolId,
+      termId,
+      status: { in: ["Approved", "Published"] },
+    };
+
+    if (classId) {
+      whereCondition.classId = classId;
+    }
+
+    const results = await prisma.result.findMany({
+      where: whereCondition,
+      include: {
+        student: true,
+        class: true,
+      },
+      orderBy: [
+        { classId: "asc" },
+        { position: "asc" },
+      ],
+    });
+
+    const defaultAffective = {
+      punctuality: 5,
+      neatness: 5,
+      politeness: 5,
+      honesty: 5,
+      cooperation: 5,
+      peerRelationship: 5,
+    };
+
+    const defaultPsychomotor = {
+      handwriting: 5,
+      publicSpeaking: 5,
+      sports: 5,
+      clubParticipation: 5,
+      craftSkills: 5,
+      musicalSkill: 5,
+    };
+
+    const classMap = new Map<string, {
+      classId: string;
+      className: string;
+      status: string;
+      approvedAt: Date | null;
+      publishedAt: Date | null;
+      results: typeof results;
+    }>();
+
+    for (const r of results) {
+      if (!classMap.has(r.classId)) {
+        classMap.set(r.classId, {
+          classId: r.classId,
+          className: r.class ? `${r.class.name} ${r.class.arm}`.trim() : "",
+          status: r.status,
+          approvedAt: r.approvedAt,
+          publishedAt: r.publishedAt,
+          results: [],
+        });
+      }
+      classMap.get(r.classId)!.results.push(r);
+    }
+
+    const classesData = Array.from(classMap.values()).map((c) => {
+      const totalAverageSum = c.results.reduce((sum, r) => sum + Number(r.average), 0);
+      const classAverage = c.results.length > 0 ? Math.round((totalAverageSum / c.results.length) * 100) / 100 : 0;
+
+      const studentsMapped = c.results.map((r) => ({
+        resultId: r.id,
+        studentId: r.studentId,
+        studentName: r.student.fullName,
+        admissionNumber: r.student.admissionNumber,
+        gender: r.student.gender,
+        dateOfBirth: formatDateWithOrdinal(r.student.dateOfBirth),
+        totalScore: Number(r.totalScore),
+        average: Number(r.average),
+        position: r.position,
+        subjectCount: r.subjectCount,
+        status: r.status,
+        teacherComment: r.teacherComment,
+        formTeacherRemark: r.teacherComment,
+        adminComment: r.adminComment,
+        principalsRemark: r.adminComment || "",
+        daysSchoolOpened: r.daysSchoolOpened ?? term.daysSchoolOpened ?? 0,
+        daysPresent: r.daysPresent ?? 0,
+        nextTermBegins: formatDateWithOrdinal(r.nextTermBegins ?? term.nextTermBegins),
+        promotedTo: r.promotedTo || null,
+        affectiveDomains: r.affectiveDomains || defaultAffective,
+        psychomotorDomains: r.psychomotorDomains || defaultPsychomotor,
+      }));
+
+      return {
+        classId: c.classId,
+        className: c.className,
+        status: c.status,
+        approvedAt: c.approvedAt,
+        publishedAt: c.publishedAt,
+        totalStudents: c.results.length,
+        classAverage,
+        students: studentsMapped,
+      };
+    });
+
+    return successResponse({
+      termId: term.id,
+      termName: term.termNumber,
+      sessionName: term.academicSession.name,
+      totalClasses: classesData.length,
+      classes: classesData,
+    }, "Approved class results for term retrieved successfully.");
+  }
 }
+

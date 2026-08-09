@@ -178,4 +178,36 @@ export class ResultController {
       next(error);
     }
   }
+
+  static async getApprovedClassResults(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { classId, termId } = req.params;
+
+      const result = await ResultService.getApprovedClassResults(schoolId, classId, termId);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getApprovedResultsByTerm(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { termId } = req.params;
+      const classId = req.query.classId as string | undefined;
+
+      const result = await ResultService.getApprovedResultsByTerm(schoolId, termId, classId);
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+
