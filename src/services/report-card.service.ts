@@ -10,7 +10,11 @@ export class ReportCardService {
       where: { schoolId, studentId, termId },
       include: {
         student: true,
-        class: true,
+        class: {
+          include: {
+            formTeacher: true,
+          },
+        },
         term: {
           include: { academicSession: true },
         },
@@ -58,6 +62,11 @@ export class ReportCardService {
 
     const gradingRulesResult = await GradingService.getGradingRules(schoolId);
 
+    const formTeacherInfo = {
+      name: result.class?.formTeacher?.fullName || "",
+      signatureUrl: result.class?.formTeacher?.signatureUrl || "",
+    };
+
     const reportCard = {
       schoolName: school.name,
       schoolAddress: school.address,
@@ -75,6 +84,18 @@ export class ReportCardService {
       classAverage: Number(result.classAverage),
       position: result.position,
       totalStudentsInClass: totalInClass,
+      classSize: totalInClass,
+      formTeacherName: formTeacherInfo.name,
+      formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
+      formTeacherInfo,
+      resultMetadata: {
+        classSize: totalInClass,
+        totalStudentsInClass: totalInClass,
+        formTeacherName: formTeacherInfo.name,
+        formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
+        principalName: school.principalName || "",
+        principalSignatureUrl: school.principalSignatureUrl || "",
+      },
       subjectCount: result.subjectCount,
       teacherComment: result.teacherComment,
       adminComment: result.adminComment,

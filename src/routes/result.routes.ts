@@ -521,5 +521,7 @@ router.patch("/metadata/:resultId", authMiddleware(["SchoolAdmin", "Teacher"]), 
  *         description: My results retrieved successfully
  */
 router.get("/my/term/:termId", authMiddleware(["Student"]), requireSchoolId, ResultController.checkMyResult);
+router.get("/my-results/:termId?", authMiddleware(["Student"]), requireSchoolId, ResultController.checkMyResult);
+router.get("/my-results", authMiddleware(["Student"]), requireSchoolId, ResultController.checkMyResult);
 
 export default router;

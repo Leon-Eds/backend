@@ -667,6 +667,7 @@ export class ResultService {
       position: result.position,
       subjectCount: result.subjectCount,
       totalStudentsInClass: totalInClass,
+      classSize: totalInClass,
       status: result.status,
       teacherComment: result.teacherComment,
       formTeacherRemark: result.teacherComment,
@@ -680,7 +681,18 @@ export class ResultService {
 
       // Teacher Signature Metadata
       formTeacherInfo,
+      formTeacherName: formTeacherInfo.name,
       formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
+
+      // Embedded metadata object for student report page
+      resultMetadata: {
+        classSize: totalInClass,
+        totalStudentsInClass: totalInClass,
+        formTeacherName: formTeacherInfo.name,
+        formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
+        principalName: schoolInfo.principalName,
+        principalSignatureUrl: schoolInfo.principalSignatureUrl,
+      },
 
       // 1. Student Profile Extensions
       gender: result.student.gender,
@@ -701,7 +713,7 @@ export class ResultService {
     }, "Student result retrieved.");
   }
 
-  static async checkMyResult(schoolId: string, userId: string, termId: string) {
+  static async checkMyResult(schoolId: string, userId: string, termId?: string) {
     const student = await prisma.student.findFirst({
       where: { schoolId, userId },
     });
@@ -710,8 +722,30 @@ export class ResultService {
       return failResponse("Student profile not found.");
     }
 
+    let targetTermId = termId;
+    if (!targetTermId) {
+      const currentTerm = await prisma.term.findFirst({
+        where: { isCurrent: true, academicSession: { schoolId } },
+      });
+      if (currentTerm) {
+        targetTermId = currentTerm.id;
+      } else {
+        const latestResult = await prisma.result.findFirst({
+          where: { schoolId, studentId: student.id, status: { in: ["Published", "Approved"] } },
+          orderBy: { createdAt: "desc" },
+        });
+        if (latestResult) {
+          targetTermId = latestResult.termId;
+        }
+      }
+    }
+
+    if (!targetTermId) {
+      return failResponse("No active or published term found.");
+    }
+
     const result = await prisma.result.findFirst({
-      where: { schoolId, studentId: student.id, termId },
+      where: { schoolId, studentId: student.id, termId: targetTermId },
     });
 
     if (!result || (result.status !== "Published" && result.status !== "Approved")) {
@@ -722,7 +756,7 @@ export class ResultService {
       }, "Results not yet available.");
     }
 
-    const isCleared = await FeeService.isStudentCleared(schoolId, student.id, termId);
+    const isCleared = await FeeService.isStudentCleared(schoolId, student.id, targetTermId);
     if (!isCleared) {
       return successResponse({
         isFeesCleared: false,
@@ -731,12 +765,13 @@ export class ResultService {
       }, "Fee clearance required.");
     }
 
-    const fullResult = await this.getStudentResult(schoolId, student.id, termId);
+    const fullResult = await this.getStudentResult(schoolId, student.id, targetTermId);
 
     return successResponse({
       isFeesCleared: true,
       message: "Result retrieved successfully.",
       result: fullResult.data,
+      resultMetadata: fullResult.data?.resultMetadata,
     }, "Result retrieved.");
   }
 

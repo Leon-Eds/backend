@@ -102,7 +102,7 @@ export class ResultController {
       const schoolId = req.schoolId!;
       const userId = req.user?.id!;
 
-      const { termId } = req.params;
+      const termId = req.params.termId || (req.query.termId as string);
 
       const result = await ResultService.checkMyResult(schoolId, userId, termId);
       if (result.success) {
