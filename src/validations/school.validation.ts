@@ -6,6 +6,10 @@ export const updateSchoolSchema = z.object({
   contactEmail: z.string().email("Invalid email address").optional(),
   contactPhone: z.string().max(30).optional(),
   logoUrl: z.string().max(500).optional(),
+  schoolType: z.string().max(100).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
+  country: z.string().max(100).optional(),
   schoolTheme: z.object({
     primaryColor: z.string().max(30).optional(),
     secondaryColor: z.string().max(30).optional(),

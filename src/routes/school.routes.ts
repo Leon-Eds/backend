@@ -123,6 +123,30 @@ router.get("/:id", authMiddleware(), SchoolController.getById);
  *               bankAccountNumber:
  *                 type: string
  *                 example: "0123456789"
+ *               motto:
+ *                 type: string
+ *                 example: "Excellence in Education"
+ *               website:
+ *                 type: string
+ *                 example: "https://myschool.com"
+ *               principalName:
+ *                 type: string
+ *                 example: "Dr. Jane Doe"
+ *               principalSignatureUrl:
+ *                 type: string
+ *                 example: "https://example.com/signatures/principal.png"
+ *               schoolType:
+ *                 type: string
+ *                 example: "Secondary"
+ *               city:
+ *                 type: string
+ *                 example: "Lagos"
+ *               state:
+ *                 type: string
+ *                 example: "Lagos State"
+ *               country:
+ *                 type: string
+ *                 example: "Nigeria"
  *     responses:
  *       200:
  *         description: School profile updated successfully
