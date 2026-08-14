@@ -27,6 +27,7 @@ export class StudentService {
         phone: parent.phone,
         passportUrl: parent.passportUrl || "",
         idNumber: parent.idNumber || "",
+        relationship: parent.relationship || "",
       } : null,
       status: s.status,
       classId: s.classId,
@@ -44,7 +45,7 @@ export class StudentService {
    */
   private static async findOrCreateParent(
     schoolId: string,
-    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string }
+    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string; parentRelationship?: string }
   ) {
     if (!data.parentEmail || data.parentEmail.trim() === "") {
       return null;
@@ -77,6 +78,9 @@ export class StudentService {
       if (data.parentIdNumber !== undefined && data.parentIdNumber !== parent.idNumber) {
         updateData.idNumber = data.parentIdNumber;
       }
+      if (data.parentRelationship !== undefined && data.parentRelationship !== parent.relationship) {
+        updateData.relationship = data.parentRelationship;
+      }
 
       if (Object.keys(updateData).length > 0) {
         parent = await prisma.parent.update({
@@ -97,6 +101,7 @@ export class StudentService {
         phone: data.parentPhone || "",
         passportUrl: data.parentPassportUrl || "",
         idNumber: data.parentIdNumber || "",
+        relationship: data.parentRelationship || "",
       },
     });
 
@@ -262,6 +267,7 @@ export class StudentService {
       parentPhone: request.parentPhone || "",
       parentPassportUrl: request.parentPassportUrl || "",
       parentIdNumber: request.parentIdNumber || "",
+      parentRelationship: request.parentRelationship || "",
     });
 
     // Handle date parsing safely
@@ -323,7 +329,8 @@ export class StudentService {
       request.parentEmail !== undefined ||
       request.parentPhone !== undefined ||
       request.parentPassportUrl !== undefined ||
-      request.parentIdNumber !== undefined;
+      request.parentIdNumber !== undefined ||
+      request.parentRelationship !== undefined;
 
     if (hasParentUpdate) {
       const parentEmail = request.parentEmail !== undefined
@@ -341,6 +348,9 @@ export class StudentService {
       const parentIdNumber = request.parentIdNumber !== undefined
         ? request.parentIdNumber
         : (student.parent?.idNumber || "");
+      const parentRelationship = request.parentRelationship !== undefined
+        ? request.parentRelationship
+        : (student.parent?.relationship || "");
 
       if (parentEmail && parentEmail.trim() !== "") {
         const parent = await this.findOrCreateParent(schoolId, {
@@ -349,6 +359,7 @@ export class StudentService {
           parentPhone,
           parentPassportUrl,
           parentIdNumber,
+          parentRelationship,
         });
         newParentId = parent?.id || null;
       } else {

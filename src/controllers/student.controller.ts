@@ -97,7 +97,7 @@ export class StudentController {
     }
   }
 
-  static async downloadMyIdCardPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  static async getMyIdCardData(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;
       const userId = req.user?.id;
@@ -113,20 +113,18 @@ export class StudentController {
         return res.status(404).json({ success: false, message: "Student profile not found." });
       }
 
-      const result = await StudentCardService.generateStudentIdCardPdf(schoolId, student.id);
+      const result = await StudentCardService.getStudentIdCardData(schoolId, student.id);
       if (!result.success) {
         return res.status(400).json(result);
       }
 
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=idcard-${student.admissionNumber || student.id}.pdf`);
-      return res.send(result.data);
+      return res.status(200).json(result);
     } catch (error) {
       next(error);
     }
   }
 
-  static async downloadStudentIdCardPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  static async getStudentIdCardData(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;
       const { id } = req.params;
@@ -139,14 +137,12 @@ export class StudentController {
         return res.status(404).json({ success: false, message: "Student not found." });
       }
 
-      const result = await StudentCardService.generateStudentIdCardPdf(schoolId, id);
+      const result = await StudentCardService.getStudentIdCardData(schoolId, id);
       if (!result.success) {
         return res.status(400).json(result);
       }
 
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=idcard-${student.admissionNumber || student.id}.pdf`);
-      return res.send(result.data);
+      return res.status(200).json(result);
     } catch (error) {
       next(error);
     }

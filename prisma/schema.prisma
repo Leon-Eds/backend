@@ -175,6 +175,7 @@ model Parent {
   phone             String    @default("") @db.VarChar(30)
   passportUrl       String    @default("") @db.VarChar(500)
   idNumber          String    @default("") @db.VarChar(100)
+  relationship      String    @default("") @db.VarChar(50) /// e.g. Father, Mother, Guardian
   createdAt         DateTime  @default(now())
   updatedAt         DateTime? @updatedAt
 
