@@ -155,6 +155,12 @@ router.get("/:id", StudentController.getById);
  *               parentIdNumber:
  *                 type: string
  *                 description: Parent's ID card number (e.g. NIN, driver's license)
+ *               parentRelationship:
+ *                 type: string
+ *                 description: Parent's relationship to student (e.g. Father, Mother, Guardian)
+ *               relationship:
+ *                 type: string
+ *                 description: Alias for parentRelationship
  *               password:
  *                 type: string
  *                 description: Optional login password for the student account (defaults to Student@123! if not provided)

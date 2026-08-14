@@ -19,6 +19,8 @@ export class StudentService {
       parentName: parent?.fullName || "",
       parentPhone: parent?.phone || "",
       parentEmail: parent?.email || "",
+      parentRelationship: parent?.relationship || "",
+      relationship: parent?.relationship || "",
       // New parent object with full details
       parent: parent ? {
         id: parent.id,
@@ -261,13 +263,14 @@ export class StudentService {
     });
 
     // 4. Find or create parent record
+    const parentRelationship = request.relationship || request.parentRelationship || "";
     const parent = await this.findOrCreateParent(schoolId, {
       parentName: request.parentName || "",
       parentEmail: request.parentEmail || "",
       parentPhone: request.parentPhone || "",
       parentPassportUrl: request.parentPassportUrl || "",
       parentIdNumber: request.parentIdNumber || "",
-      parentRelationship: request.parentRelationship || "",
+      parentRelationship,
     });
 
     // Handle date parsing safely
@@ -330,7 +333,8 @@ export class StudentService {
       request.parentPhone !== undefined ||
       request.parentPassportUrl !== undefined ||
       request.parentIdNumber !== undefined ||
-      request.parentRelationship !== undefined;
+      request.parentRelationship !== undefined ||
+      request.relationship !== undefined;
 
     if (hasParentUpdate) {
       const parentEmail = request.parentEmail !== undefined
@@ -348,9 +352,11 @@ export class StudentService {
       const parentIdNumber = request.parentIdNumber !== undefined
         ? request.parentIdNumber
         : (student.parent?.idNumber || "");
-      const parentRelationship = request.parentRelationship !== undefined
-        ? request.parentRelationship
-        : (student.parent?.relationship || "");
+      const parentRelationship = request.relationship !== undefined
+        ? request.relationship
+        : (request.parentRelationship !== undefined
+            ? request.parentRelationship
+            : (student.parent?.relationship || ""));
 
       if (parentEmail && parentEmail.trim() !== "") {
         const parent = await this.findOrCreateParent(schoolId, {
