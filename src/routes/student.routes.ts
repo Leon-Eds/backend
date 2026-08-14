@@ -9,6 +9,13 @@ const router = Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Students
+ *   description: API for managing students in a school
+ */
+
+/**
+ * @swagger
  * /api/student/idcard/data:
  *   get:
  *     summary: Retrieve JSON data for authenticated student's own ID card
@@ -105,13 +112,6 @@ router.get("/:id/idcard/pdf", authMiddleware(["SuperAdmin", "SchoolAdmin"]), req
 
 router.use(authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]));
 router.use(requireSchoolId);
-
-/**
- * @swagger
- * tags:
- *   name: Students
- *   description: API for managing students in a school
- */
 
 /**
  * @swagger
