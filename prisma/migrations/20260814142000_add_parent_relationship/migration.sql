@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Parent" ADD COLUMN IF NOT EXISTS "relationship" VARCHAR(50) NOT NULL DEFAULT '';
