@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+        .receipt-container { max-width: 800px; margin: 0 auto; background: white; padding: 24px; position: relative; }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+
+    <div id="receipt-container" class="receipt-container shadow-lg border border-gray-200">
+        <div 
+            class="absolute top-0 left-0 right-0 h-2" 
+            style="background-color: {{themeColor}}"
+        ></div>
+        
+        <div class="border-b border-gray-800 pb-3 mb-4 mt-2 flex justify-between items-end">
+            <div class="flex items-center gap-3">
+                {{#if schoolLogo}}
+                <img src="{{schoolLogo}}" alt="School Logo" class="h-12 w-12 object-contain" />
+                {{/if}}
+                <div>
+                    <h1 
+                        class="text-xl font-black mb-0.5 uppercase"
+                        style="color: {{themeColor}}"
+                    >
+                        {{schoolName}}
+                    </h1>
+                    <p class="text-[10px] font-bold text-gray-500 tracking-widest uppercase">Official Fee Clearance Receipt</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold text-gray-800">
+                    Date: {{paymentDate}}
+                </p>
+                <p class="text-xs font-bold text-gray-500">Ref: {{paymentRef}}</p>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <h2 class="text-sm font-bold text-gray-900 mb-2">Student Details</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Name</p>
+                    <p class="text-sm font-bold text-gray-900">{{studentName}}</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Program / Class</p>
+                    <p class="text-sm font-bold text-gray-900">{{studentProgram}}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h2 class="text-sm font-bold text-gray-900 mb-2">Financial Summary</h2>
+            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-600">Payment Description</span>
+                    <span class="text-xs font-bold text-gray-900">{{paymentDescription}}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-600">Amount Due</span>
+                    <span class="text-sm font-black text-gray-900">₦{{amountDue}}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-600">Amount Paid</span>
+                    <span class="text-sm font-black text-gray-900">₦{{amountPaid}}</span>
+                </div>
+                <div class="flex justify-between pt-2 border-t border-gray-200">
+                    <span class="text-xs font-bold text-gray-900">Clearance Status</span>
+                    <span 
+                        class="text-sm font-black uppercase tracking-wider"
+                        style="color: {{statusColor}};"
+                    >
+                        {{clearanceStatus}}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bursar Signature & Clearance Info -->
+        <div class="mt-6 pt-4 border-t border-gray-200 flex justify-between items-end">
+            <div class="text-left">
+                {{#if clearedByName}}
+                <p class="text-[10px] font-bold text-green-700">Cleared By: {{clearedByName}}</p>
+                {{#if clearedAtDate}}
+                <p class="text-[9px] font-medium text-gray-500">Date Cleared: {{clearedAtDate}}</p>
+                {{/if}}
+                {{/if}}
+            </div>
+            <div class="flex flex-col items-center">
+                {{#if bursarSignatureUrl}}
+                <img src="{{bursarSignatureUrl}}" alt="Bursar Signature" class="h-10 mb-1 object-contain" />
+                {{else}}
+                <div class="h-10 mb-1"></div>
+                {{/if}}
+                <div class="w-40 border-t border-gray-400 mb-1"></div>
+                <p class="text-xs font-bold text-gray-900">Bursar / Accounts Officer</p>
+                {{#if bursarName}}
+                <p class="text-[10px] font-medium text-gray-600">{{bursarName}}</p>
+                {{/if}}
+            </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-200 text-center">
+            <p class="text-[10px] font-bold text-gray-400">This is a system-generated receipt and does not require a physical signature.</p>
+            <p class="text-[9px] font-bold text-gray-300 mt-1">© {{currentYear}} {{schoolName}}. Academic Architect System.</p>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -146,6 +146,7 @@ model User {
   passwordHash       String
   role               UserRole
   profilePictureUrl  String             @default("") @db.VarChar(500)
+  signatureUrl       String?            @default("") @db.VarChar(500)
   isActive           Boolean            @default(true)
   refreshToken       String?
   refreshTokenExpiry DateTime?

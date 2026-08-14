@@ -7,11 +7,13 @@ import { createStudentSchema, updateStudentSchema } from "../validations/student
 
 const router = Router();
 
-// Student-accessible route for self ID card data
+// Student-accessible route for self ID card data & PDF
 router.get("/idcard/data", authMiddleware(["Student"]), requireSchoolId, StudentController.getMyIdCardData);
+router.get("/idcard/pdf", authMiddleware(["Student"]), requireSchoolId, StudentController.downloadMyIdCardPdf);
 
-// Admin-accessible route for specific student ID card data
+// Admin-accessible route for specific student ID card data & PDF
 router.get("/:id/idcard", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.getStudentIdCardData);
+router.get("/:id/idcard/pdf", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.downloadStudentIdCardPdf);
 
 router.use(authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]));
 router.use(requireSchoolId);
