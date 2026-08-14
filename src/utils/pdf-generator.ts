@@ -1,4 +1,4 @@
-import puppeteer, { Browser, PaperFormat } from "puppeteer";
+import type { PaperFormat } from "puppeteer";
 import handlebars from "handlebars";
 import fs from "fs";
 import path from "path";
@@ -18,13 +18,21 @@ export interface PdfOptions {
 }
 
 export class PdfGenerator {
-  private static browserPromise: Promise<Browser> | null = null;
+  private static browserPromise: Promise<any> | null = null;
 
-  private static async getBrowser(): Promise<Browser> {
+  private static async getBrowser(): Promise<any> {
     if (!this.browserPromise) {
-      this.browserPromise = puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      this.browserPromise = (async () => {
+        // Dynamic import to avoid ERR_REQUIRE_ESM when requiring ES Module puppeteer in CommonJS environments
+        const puppeteerModule = await import("puppeteer");
+        const puppeteer = puppeteerModule.default || puppeteerModule;
+        return puppeteer.launch({
+          headless: true,
+          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+        });
+      })().catch((err) => {
+        this.browserPromise = null;
+        throw err;
       });
     }
     return this.browserPromise;
