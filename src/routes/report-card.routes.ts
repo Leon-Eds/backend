@@ -14,6 +14,37 @@ const router = Router();
 
 /**
  * @swagger
+ * /api/reportcard/my/{termId}/pdf:
+ *   get:
+ *     summary: Download the authenticated student's own report card as a PDF
+ *     tags: [Report Cards]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The term ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student's own report card PDF downloaded successfully
+ *       400:
+ *         description: Fee clearance required or student not found
+ *       403:
+ *         description: Access denied
+ */
+router.get("/my/:termId/pdf", authMiddleware(["Student"]), requireSchoolId, ReportCardController.downloadMyReportCard);
+
+/**
+ * @swagger
  * /api/reportcard/{studentId}/{termId}:
  *   get:
  *     summary: Retrieve JSON data for a student's report card
@@ -78,31 +109,5 @@ router.get("/:studentId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), re
  */
 router.get("/:studentId/:termId/pdf", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ReportCardController.downloadReportCardPdf);
 
-/**
- * @swagger
- * /api/reportcard/my/{termId}/pdf:
- *   get:
- *     summary: Download the authenticated student's own report card as a PDF
- *     tags: [Report Cards]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: termId
- *         required: true
- *         schema:
- *           type: string
- *         description: The term ID
- *       - in: header
- *         name: School-Id
- *         required: true
- *         schema:
- *           type: string
- *         description: The school ID
- *     responses:
- *       200:
- *         description: Student's own report card PDF downloaded successfully
- */
-router.get("/my/:termId/pdf", authMiddleware(["Student"]), requireSchoolId, ReportCardController.downloadMyReportCard);
-
 export default router;
+

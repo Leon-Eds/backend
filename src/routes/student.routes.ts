@@ -7,12 +7,100 @@ import { createStudentSchema, updateStudentSchema } from "../validations/student
 
 const router = Router();
 
-// Student-accessible route for self ID card data & PDF
+/**
+ * @swagger
+ * /api/student/idcard/data:
+ *   get:
+ *     summary: Retrieve JSON data for authenticated student's own ID card
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student ID card JSON data retrieved successfully
+ */
 router.get("/idcard/data", authMiddleware(["Student"]), requireSchoolId, StudentController.getMyIdCardData);
+
+/**
+ * @swagger
+ * /api/student/idcard/pdf:
+ *   get:
+ *     summary: Download PDF for authenticated student's own ID card
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student ID card PDF downloaded successfully
+ */
 router.get("/idcard/pdf", authMiddleware(["Student"]), requireSchoolId, StudentController.downloadMyIdCardPdf);
 
-// Admin-accessible route for specific student ID card data & PDF
+/**
+ * @swagger
+ * /api/student/{id}/idcard:
+ *   get:
+ *     summary: Retrieve JSON data for a specific student's ID card (Admin only)
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The student ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student ID card JSON data retrieved successfully
+ */
 router.get("/:id/idcard", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.getStudentIdCardData);
+
+/**
+ * @swagger
+ * /api/student/{id}/idcard/pdf:
+ *   get:
+ *     summary: Download PDF for a specific student's ID card (Admin only)
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The student ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Student ID card PDF downloaded successfully
+ */
 router.get("/:id/idcard/pdf", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.downloadStudentIdCardPdf);
 
 router.use(authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]));
