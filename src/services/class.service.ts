@@ -3,12 +3,15 @@ import { successResponse, failResponse } from "../utils/response";
 import { emailService } from "../utils/email";
 
 export class ClassService {
-  private static mapToResponse(c: any) {
+  private static mapToResponse(c: any, presentTodayCount = 0) {
+    const totalStudents = c.students ? c.students.filter((s: any) => s.status === "Active" || !s.status).length : 0;
     return {
       id: c.id,
       name: c.name,
       arm: c.arm,
-      studentCount: c.students ? c.students.length : 0,
+      studentCount: totalStudents,
+      totalStudents,
+      presentToday: presentTodayCount,
       academicSessionId: c.academicSessionId,
       academicSessionName: c.academicSession?.name || null,
       formTeacherId: c.formTeacherId || null,
@@ -24,45 +27,79 @@ export class ClassService {
   }
 
   static async getClasses(schoolId: string) {
-    const classes = await prisma.class.findMany({
-      where: { schoolId },
-      include: {
-        students: true,
-        classSubjects: {
-          include: {
-            subject: true,
-          },
-        },
-        academicSession: true,
-        formTeacher: true,
-      },
-      orderBy: { name: "asc" },
-    });
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
 
-    const items = classes.map((c) => this.mapToResponse(c));
+    const [classes, todayAttendances] = await Promise.all([
+      prisma.class.findMany({
+        where: { schoolId },
+        include: {
+          students: true,
+          classSubjects: {
+            include: {
+              subject: true,
+            },
+          },
+          academicSession: true,
+          formTeacher: true,
+        },
+        orderBy: { name: "asc" },
+      }),
+      prisma.attendance.groupBy({
+        by: ["classId"],
+        where: {
+          schoolId,
+          date: today,
+          status: "Present",
+        },
+        _count: {
+          studentId: true,
+        },
+      }),
+    ]);
+
+    const attendanceMap = new Map<string, number>();
+    for (const att of todayAttendances) {
+      attendanceMap.set(att.classId, att._count.studentId);
+    }
+
+    const items = classes.map((c) => this.mapToResponse(c, attendanceMap.get(c.id) || 0));
     return successResponse(items);
   }
 
   static async getClassById(schoolId: string, classId: string) {
-    const classEntity = await prisma.class.findFirst({
-      where: { id: classId, schoolId },
-      include: {
-        students: true,
-        classSubjects: {
-          include: {
-            subject: true,
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const [classEntity, presentCount] = await Promise.all([
+      prisma.class.findFirst({
+        where: { id: classId, schoolId },
+        include: {
+          students: true,
+          classSubjects: {
+            include: {
+              subject: true,
+            },
           },
+          academicSession: true,
+          formTeacher: true,
         },
-        academicSession: true,
-        formTeacher: true,
-      },
-    });
+      }),
+      prisma.attendance.count({
+        where: {
+          schoolId,
+          classId,
+          date: today,
+          status: "Present",
+        },
+      }),
+    ]);
 
     if (!classEntity) {
       return failResponse("Class not found.");
     }
 
-    return successResponse(this.mapToResponse(classEntity));
+    return successResponse(this.mapToResponse(classEntity, presentCount));
   }
 
   static async createClass(schoolId: string, request: any) {

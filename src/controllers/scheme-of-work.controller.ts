@@ -133,4 +133,50 @@ export class SchemeOfWorkController {
       next(error);
     }
   }
+
+  static async reviewSchemeOfWork(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+      const adminUserId = req.user?.id!;
+
+      const result = await SchemeOfWorkService.reviewSchemeOfWork(
+        schoolId,
+        id,
+        adminUserId,
+        req.body
+      );
+
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateTopicProgress(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const { id } = req.params;
+      const userId = req.user?.id!;
+      const userRole = req.user?.role!;
+
+      const result = await SchemeOfWorkService.updateTopicProgress(
+        schoolId,
+        id,
+        userId,
+        userRole,
+        req.body
+      );
+
+      if (result.success) {
+        return res.status(200).json(result);
+      }
+      return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

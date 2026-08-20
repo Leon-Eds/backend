@@ -6,6 +6,8 @@ import { validateBody } from "../middlewares/validation.middleware";
 import {
   createSchemeOfWorkSchema,
   updateSchemeOfWorkSchema,
+  reviewSchemeOfWorkSchema,
+  updateTopicProgressSchema,
 } from "../validations/scheme-of-work.validation";
 
 const router = Router();
@@ -305,6 +307,102 @@ router.get(
   authMiddleware(["Student"]),
   requireSchoolId,
   SchemeOfWorkController.getMySchemes
+);
+
+/**
+ * @swagger
+ * /api/scheme-of-work/{id}/review:
+ *   patch:
+ *     summary: Review (Approve or Reject) a scheme of work (SchoolAdmin only)
+ *     tags: [Scheme of Work]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Scheme of work ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [Approved, Rejected]
+ *               rejectionReason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Scheme of work reviewed successfully
+ *       400:
+ *         description: Validation error or not found
+ */
+router.patch(
+  "/:id/review",
+  authMiddleware(["SuperAdmin", "SchoolAdmin"]),
+  requireSchoolId,
+  validateBody(reviewSchemeOfWorkSchema),
+  SchemeOfWorkController.reviewSchemeOfWork
+);
+
+/**
+ * @swagger
+ * /api/scheme-of-work/{id}/progress:
+ *   patch:
+ *     summary: Update topic completion progress for a specific week (Teacher / SchoolAdmin)
+ *     tags: [Scheme of Work]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Scheme of work ID
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - week
+ *               - isCompleted
+ *             properties:
+ *               week:
+ *                 type: integer
+ *               isCompleted:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Topic progress updated successfully
+ *       400:
+ *         description: Validation error or access denied
+ */
+router.patch(
+  "/:id/progress",
+  authMiddleware(["SuperAdmin", "SchoolAdmin", "Teacher"]),
+  requireSchoolId,
+  validateBody(updateTopicProgressSchema),
+  SchemeOfWorkController.updateTopicProgress
 );
 
 export default router;

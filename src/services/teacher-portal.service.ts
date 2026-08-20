@@ -1,5 +1,6 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
+import { AnnouncementService } from "./announcement.service";
 
 /**
  * TeacherPortalService
@@ -59,27 +60,62 @@ export class TeacherPortalService {
 
   /**
    * GET /api/teacher-portal/classes
-   * Returns the distinct classes assigned to the teacher, with subjects per class.
+   * Returns the distinct classes assigned to the teacher (subject assignments + form classes),
+   * with subjects per class, total active students, and presentToday count.
    */
   static async getMyClasses(schoolId: string, userId: string) {
     const teacher = await this.resolveTeacher(schoolId, userId);
     if (!teacher) return failResponse("Teacher profile not found.");
 
-    const assignments = await prisma.teacherSubjectAssignment.findMany({
-      where: { teacherId: teacher.id },
-      include: {
-        subject: true,
-        class: {
-          include: {
-            students: {
-              where: { status: "Active" },
-              select: { id: true },
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const [assignments, formClasses, todayAttendances] = await Promise.all([
+      prisma.teacherSubjectAssignment.findMany({
+        where: { teacherId: teacher.id },
+        include: {
+          subject: true,
+          class: {
+            include: {
+              students: {
+                where: { status: "Active" },
+                select: { id: true },
+              },
+              academicSession: true,
             },
-            academicSession: true,
           },
         },
-      },
-    });
+      }),
+      prisma.class.findMany({
+        where: { schoolId, formTeacherId: teacher.id },
+        include: {
+          students: {
+            where: { status: "Active" },
+            select: { id: true },
+          },
+          academicSession: true,
+          classSubjects: {
+            include: { subject: true },
+          },
+        },
+      }),
+      prisma.attendance.groupBy({
+        by: ["classId"],
+        where: {
+          schoolId,
+          date: today,
+          status: "Present",
+        },
+        _count: {
+          studentId: true,
+        },
+      }),
+    ]);
+
+    const attendanceMap = new Map<string, number>();
+    for (const att of todayAttendances) {
+      attendanceMap.set(att.classId, att._count.studentId);
+    }
 
     // Group by classId
     const classMap = new Map<string, {
@@ -87,10 +123,35 @@ export class TeacherPortalService {
       className: string;
       arm: string;
       studentCount: number;
+      totalStudents: number;
+      presentToday: number;
+      isFormTeacher: boolean;
       academicSession: string | null;
       subjects: { subjectId: string; subjectName: string }[];
     }>();
 
+    // 1. Process Form Classes first
+    for (const fc of formClasses) {
+      const key = fc.id;
+      classMap.set(key, {
+        classId: fc.id,
+        className: `${fc.name} ${fc.arm}`.trim(),
+        arm: fc.arm,
+        studentCount: fc.students?.length || 0,
+        totalStudents: fc.students?.length || 0,
+        presentToday: attendanceMap.get(fc.id) || 0,
+        isFormTeacher: true,
+        academicSession: fc.academicSession?.name || null,
+        subjects: fc.classSubjects
+          ? fc.classSubjects.map((cs) => ({
+              subjectId: cs.subjectId,
+              subjectName: cs.subject?.name || "",
+            }))
+          : [],
+      });
+    }
+
+    // 2. Process Subject Assignments
     for (const a of assignments) {
       if (!a.class) continue;
       const key = a.classId;
@@ -101,13 +162,16 @@ export class TeacherPortalService {
           className: `${a.class.name} ${a.class.arm}`.trim(),
           arm: a.class.arm,
           studentCount: a.class.students?.length || 0,
+          totalStudents: a.class.students?.length || 0,
+          presentToday: attendanceMap.get(a.classId) || 0,
+          isFormTeacher: false,
           academicSession: a.class.academicSession?.name || null,
           subjects: [],
         });
       }
 
       const entry = classMap.get(key)!;
-      if (!entry.subjects.some((s) => s.subjectId === a.subjectId)) {
+      if (a.subject && !entry.subjects.some((s) => s.subjectId === a.subjectId)) {
         entry.subjects.push({
           subjectId: a.subjectId,
           subjectName: a.subject?.name || "",
@@ -516,5 +580,28 @@ export class TeacherPortalService {
       daysSchoolOpened: updatedResult.daysSchoolOpened,
       promotedTo: updatedResult.promotedTo,
     }, "Student domain ratings and remarks updated successfully.");
+  }
+
+  /**
+   * POST /api/teacher-portal/class-broadcast
+   * Allows teachers to send broadcast announcements directly to assigned classes.
+   */
+  static async sendClassBroadcast(
+    schoolId: string,
+    userId: string,
+    payload: { targetClassId: string; title: string; content: string; category?: string }
+  ) {
+    return AnnouncementService.createAnnouncement(
+      schoolId,
+      userId,
+      {
+        title: payload.title,
+        content: payload.content,
+        audience: "Class",
+        targetClassId: payload.targetClassId,
+        category: payload.category || "ACADEMIC",
+      },
+      "Teacher"
+    );
   }
 }

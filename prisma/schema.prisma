@@ -540,16 +540,27 @@ model SubscriptionPaymentLog {
   @@index([paidAt])
 }
 
+enum SchemeOfWorkStatus {
+  Draft
+  Submitted
+  Approved
+  Rejected
+}
+
 model SchemeOfWork {
-  id        String    @id @default(uuid()) @db.Uuid
-  schoolId  String    @db.Uuid
-  classId   String    @db.Uuid
-  subjectId String    @db.Uuid
-  termId    String    @db.Uuid
-  teacherId String    @db.Uuid
-  topics    Json      /// Array of { week: number, topic: string, description?: string }
-  createdAt DateTime  @default(now())
-  updatedAt DateTime? @updatedAt
+  id               String             @id @default(uuid()) @db.Uuid
+  schoolId         String             @db.Uuid
+  classId          String             @db.Uuid
+  subjectId        String             @db.Uuid
+  termId           String             @db.Uuid
+  teacherId        String             @db.Uuid
+  status           SchemeOfWorkStatus @default(Submitted)
+  rejectionReason  String?            @default("") @db.VarChar(500)
+  approvedAt       DateTime?
+  approvedByUserId String?            @db.Uuid
+  topics           Json               /// Array of { week: number, topic: string, description?: string, isCompleted?: boolean, completedAt?: string }
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime?          @updatedAt
 
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)

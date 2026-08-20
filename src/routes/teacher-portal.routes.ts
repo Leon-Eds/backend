@@ -293,4 +293,48 @@ router.get("/form-class/students-domains", TeacherPortalController.getFormClassD
  */
 router.put("/form-class/students/:studentId/domains", validateBody(updateStudentDomainsSchema), TeacherPortalController.updateStudentDomains);
 
+/**
+ * @swagger
+ * /api/teacher-portal/class-broadcast:
+ *   post:
+ *     summary: Broadcast an announcement message to a specific class (assigned form or subject class)
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - targetClassId
+ *               - title
+ *               - content
+ *             properties:
+ *               targetClassId:
+ *                 type: string
+ *                 format: uuid
+ *               title:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *                 default: ACADEMIC
+ *     responses:
+ *       201:
+ *         description: Class broadcast created successfully
+ *       400:
+ *         description: Validation error or teacher not assigned to target class
+ */
+router.post("/class-broadcast", TeacherPortalController.sendClassBroadcast);
+
 export default router;

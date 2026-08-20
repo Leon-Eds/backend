@@ -16,3 +16,13 @@ export const createSchemeOfWorkSchema = z.object({
 export const updateSchemeOfWorkSchema = z.object({
   topics: z.array(topicItemSchema).min(1, "At least one topic must be provided"),
 });
+
+export const reviewSchemeOfWorkSchema = z.object({
+  status: z.enum(["Approved", "Rejected"]),
+  rejectionReason: z.string().optional().default(""),
+});
+
+export const updateTopicProgressSchema = z.object({
+  week: z.number().int().min(1, "Week must be at least 1"),
+  isCompleted: z.boolean(),
+});

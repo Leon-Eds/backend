@@ -93,7 +93,34 @@ export class AnnouncementService {
     return successResponse(this.mapToResponse(announcement));
   }
 
-  static async createAnnouncement(schoolId: string, userId: string, request: any) {
+  static async createAnnouncement(schoolId: string, userId: string, request: any, userRole?: string) {
+    // Role-based check for Teachers
+    if (userRole === "Teacher") {
+      if (request.audience !== "Class" || !request.targetClassId) {
+        return failResponse("Teachers can only send broadcast announcements to a specific assigned class.");
+      }
+
+      const teacher = await prisma.teacher.findFirst({
+        where: { userId, schoolId },
+      });
+      if (!teacher) {
+        return failResponse("Teacher profile not found.");
+      }
+
+      const [isFormTeacher, isSubjectTeacher] = await Promise.all([
+        prisma.class.findFirst({
+          where: { id: request.targetClassId, schoolId, formTeacherId: teacher.id },
+        }),
+        prisma.teacherSubjectAssignment.findFirst({
+          where: { teacherId: teacher.id, classId: request.targetClassId },
+        }),
+      ]);
+
+      if (!isFormTeacher && !isSubjectTeacher) {
+        return failResponse("Access Denied: You are not assigned to teach or manage this class.");
+      }
+    }
+
     // If audience is "Class", require targetClassId
     if (request.audience === "Class" && !request.targetClassId) {
       return failResponse("Target class is required when audience is 'Class'.");

@@ -126,7 +126,7 @@ router.get("/:id", authMiddleware(), requireSchoolId, AnnouncementController.get
  *       400:
  *         description: Bad request
  */
-router.post("/", authMiddleware(["SchoolAdmin"]), requireSchoolId, validateBody(createAnnouncementSchema), AnnouncementController.create);
+router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin", "Teacher"]), requireSchoolId, validateBody(createAnnouncementSchema), AnnouncementController.create);
 
 /**
  * @swagger

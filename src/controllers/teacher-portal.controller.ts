@@ -108,4 +108,15 @@ export class TeacherPortalController {
       next(error);
     }
   }
+
+  static async sendClassBroadcast(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const result = await TeacherPortalService.sendClassBroadcast(schoolId, userId, req.body);
+      return res.status(result.success ? 201 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
