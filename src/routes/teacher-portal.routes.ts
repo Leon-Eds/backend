@@ -328,7 +328,9 @@ router.put("/form-class/students/:studentId/domains", validateBody(updateStudent
  *                 type: string
  *               category:
  *                 type: string
- *                 default: ACADEMIC
+ *                 enum: [GENERAL, HEALTH, EMERGENCY, REMINDERS, SUMMONS, ACADEMIC_NOTICE]
+ *                 default: ACADEMIC_NOTICE
+ *                 description: Announcement category (ACADEMIC is automatically mapped to ACADEMIC_NOTICE)
  *     responses:
  *       201:
  *         description: Class broadcast created successfully

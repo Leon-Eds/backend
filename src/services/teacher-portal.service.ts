@@ -591,6 +591,16 @@ export class TeacherPortalService {
     userId: string,
     payload: { targetClassId: string; title: string; content: string; category?: string }
   ) {
+    let category = payload.category ? payload.category.trim().toUpperCase() : "ACADEMIC_NOTICE";
+    if (category === "ACADEMIC") {
+      category = "ACADEMIC_NOTICE";
+    }
+
+    const validCategories = ["GENERAL", "HEALTH", "EMERGENCY", "REMINDERS", "SUMMONS", "ACADEMIC_NOTICE"];
+    if (!validCategories.includes(category)) {
+      category = "ACADEMIC_NOTICE";
+    }
+
     return AnnouncementService.createAnnouncement(
       schoolId,
       userId,
@@ -599,7 +609,7 @@ export class TeacherPortalService {
         content: payload.content,
         audience: "Class",
         targetClassId: payload.targetClassId,
-        category: payload.category || "ACADEMIC",
+        category,
       },
       "Teacher"
     );
