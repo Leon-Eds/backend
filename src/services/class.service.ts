@@ -12,6 +12,7 @@ export class ClassService {
       studentCount: totalStudents,
       totalStudents,
       presentToday: presentTodayCount,
+      presentCount: presentTodayCount,
       academicSessionId: c.academicSessionId,
       academicSessionName: c.academicSession?.name || null,
       formTeacherId: c.formTeacherId || null,

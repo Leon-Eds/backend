@@ -102,5 +102,17 @@ export class AttendanceController {
       next(error);
     }
   }
+
+  static async getDailySummary(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const dateStr = req.query.date as string | undefined;
+
+      const result = await AttendanceService.getDailyAttendanceSummary(schoolId, dateStr);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 

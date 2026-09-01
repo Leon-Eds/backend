@@ -158,6 +158,8 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/announcement", announcementRoutes);
 app.use("/api/teacher-portal", teacherPortalRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/admin/attendance", attendanceRoutes);
+app.use("/admin/attendance", attendanceRoutes);
 app.use("/api/payment-plans", paymentPlanRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription-logs", subscriptionLogRoutes);

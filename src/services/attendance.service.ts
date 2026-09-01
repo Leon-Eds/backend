@@ -421,5 +421,104 @@ export class AttendanceService {
 
     return successResponse(true, "Attendance recorded successfully via QR code scan.");
   }
+
+  /**
+   * Get daily attendance summary per class for Admin portal.
+   * If dateStr is not provided, defaults to today's date (YYYY-MM-DD).
+   */
+  static async getDailyAttendanceSummary(schoolId: string, dateStr?: string) {
+    const targetDateStr = dateStr || new Date().toISOString().split("T")[0];
+    const parsedDate = new Date(`${targetDateStr}T00:00:00.000Z`);
+
+    const [classes, attendances] = await Promise.all([
+      prisma.class.findMany({
+        where: { schoolId },
+        include: {
+          students: {
+            where: { status: "Active" },
+            select: { id: true },
+          },
+          formTeacher: {
+            select: { fullName: true },
+          },
+        },
+        orderBy: { name: "asc" },
+      }),
+      prisma.attendance.groupBy({
+        by: ["classId", "status"],
+        where: {
+          schoolId,
+          date: parsedDate,
+        },
+        _count: {
+          studentId: true,
+        },
+      }),
+    ]);
+
+    const classAttendanceMap = new Map<string, { present: number; absent: number; late: number }>();
+
+    for (const att of attendances) {
+      if (!classAttendanceMap.has(att.classId)) {
+        classAttendanceMap.set(att.classId, { present: 0, absent: 0, late: 0 });
+      }
+      const stats = classAttendanceMap.get(att.classId)!;
+      const count = att._count.studentId;
+      if (att.status === "Present") stats.present = count;
+      else if (att.status === "Absent") stats.absent = count;
+      else if (att.status === "Late") stats.late = count;
+    }
+
+    let overallTotalStudents = 0;
+    let overallPresentCount = 0;
+    let overallAbsentCount = 0;
+    let overallLateCount = 0;
+
+    const classSummaries = classes.map((c) => {
+      const stats = classAttendanceMap.get(c.id) || { present: 0, absent: 0, late: 0 };
+      const totalStudents = c.students.length;
+      const markedCount = stats.present + stats.absent + stats.late;
+      const unmarkedCount = Math.max(0, totalStudents - markedCount);
+
+      const attendancePercentage = totalStudents > 0
+        ? Math.round(((stats.present + stats.late) / totalStudents) * 100)
+        : 0;
+
+      overallTotalStudents += totalStudents;
+      overallPresentCount += stats.present;
+      overallAbsentCount += stats.absent;
+      overallLateCount += stats.late;
+
+      return {
+        classId: c.id,
+        className: `${c.name} ${c.arm}`.trim(),
+        name: c.name,
+        arm: c.arm,
+        formTeacherName: c.formTeacher?.fullName || null,
+        totalStudents,
+        presentCount: stats.present,
+        absentCount: stats.absent,
+        lateCount: stats.late,
+        markedCount,
+        unmarkedCount,
+        attendancePercentage,
+      };
+    });
+
+    const overallAttendancePercentage = overallTotalStudents > 0
+      ? Math.round(((overallPresentCount + overallLateCount) / overallTotalStudents) * 100)
+      : 0;
+
+    return successResponse({
+      date: targetDateStr,
+      totalClasses: classes.length,
+      overallTotalStudents,
+      overallPresentCount,
+      overallAbsentCount,
+      overallLateCount,
+      overallAttendancePercentage,
+      classes: classSummaries,
+    }, "Daily attendance summary retrieved successfully.");
+  }
 }
 

@@ -230,4 +230,45 @@ router.post(
   AttendanceController.recordScanAttendance
 );
 
+/**
+ * @swagger
+ * /api/attendance/daily-summary:
+ *   get:
+ *     summary: Retrieve daily attendance summary breakdown per class (SuperAdmin/SchoolAdmin)
+ *     tags: [Attendance]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Date in YYYY-MM-DD format (defaults to today)
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The school ID
+ *     responses:
+ *       200:
+ *         description: Daily attendance summary retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  "/daily-summary",
+  authMiddleware(["SuperAdmin", "SchoolAdmin"]),
+  requireSchoolId,
+  AttendanceController.getDailySummary
+);
+
+router.get(
+  "/admin/daily-summary",
+  authMiddleware(["SuperAdmin", "SchoolAdmin"]),
+  requireSchoolId,
+  AttendanceController.getDailySummary
+);
+
 export default router;
