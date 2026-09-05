@@ -1,0 +1,117 @@
+LeonEd Backend Remediation and Production Impact
+Date: 5 September 2026
+
+Summary
+
+This work continued from the codebase audit and the promotion remediation committed as 3229555. The current tree now includes the promotion and enrollment-history redesign plus a second batch covering authentication, WebSocket authorization, payment verification, tenant and role boundaries, immutable fee revenue records, validation, dependency updates, and initial regression tests.
+
+Work completed
+
+1. Promotion and student history
+- Bulk promotion validates the full mapping set, snapshots source cohorts, and executes changes atomically.
+- Classes and student enrollments are tied to academic sessions.
+- Promotion, graduation, and leaving events are retained in StudentEnrollment history.
+- Refresh tokens are revoked when affected student accounts are deactivated.
+- Historical enrollment and student-status reports now use the enrollment ledger.
+- Migration: 20260905000000_add_student_enrollment_history.
+
+2. JWT and account security
+- Removed the fallback JWT secret.
+- JWT signing and verification require configured key, issuer, audience, and HS256.
+- Authenticated HTTP and Socket.IO requests resolve the current database user, so inactive users and suspended schools lose access immediately.
+- Password-reset tokens are returned only through email, stored as SHA-256 hashes, expire after 15 minutes, and revoke refresh access after reset.
+- Password changes revoke existing refresh tokens and are now available to students.
+- New student accounts receive a unique generated temporary credential when no password is supplied; the shared Student@123! default is gone.
+- Super-admin bootstrap is single-use after the first SuperAdmin exists.
+
+3. WebSocket authorization
+- Socket.IO requires a JWT in handshake.auth.token or the Authorization header.
+- user and school rooms are derived from the authenticated account.
+- The client-controlled register event can no longer select arbitrary user or school rooms.
+
+4. Paystack and scheduled task controls
+- The webhook fails closed if PAYSTACK_SECRET_KEY or the signature/raw payload is absent.
+- The HMAC is calculated from the exact request bytes and compared in constant time.
+- Payment plan, amount, and customer email are checked before a school subscription changes.
+- Paystack helper methods no longer simulate successful operations when the key is missing.
+- The cron endpoint is POST-only, accepts its secret only in x-cron-secret, compares it in constant time, and fails closed if CRON_SECRET is absent.
+
+5. Authorization and tenant integrity
+- Principal-level result metadata can be changed only by SchoolAdmin.
+- Attendance writes reject duplicate students and students who are inactive, in another class, or in another school.
+- Score writes verify active class membership, class-subject assignment, and the term/session/school relationship. academicSessionId is resolved from the term instead of trusted from the client.
+- Announcement item lookup applies the same audience restrictions as announcement lists.
+- General reports use per-route roles. Financial reports are limited to SchoolAdmin and Bursar; staff, enrollment, status, attendance, and performance reports are SchoolAdmin-only.
+- Bursars cannot use the export endpoint to export non-financial report types.
+- Term lookups in results, attendance, fees, bursar reporting, report cards, schemes of work, teacher portal, scores, and general reports are scoped through the owning school.
+
+6. Data consistency and revenue accounting
+- School plus administrator creation is transactional.
+- Teacher plus user creation is transactional.
+- Student, user, parent, and initial enrollment creation is transactional.
+- Added FeePaymentTransaction as an immutable payment-event ledger with amount, method, reference, recorder, time, and reversal linkage.
+- Fee record updates write only the positive difference between the previous and new cumulative amountPaid as a transaction.
+- Duplicate payment references are rejected per school.
+- Silent reductions of amountPaid are rejected; corrections require an explicit reversal workflow.
+- Revenue reports now aggregate FeePaymentTransaction events by createdAt rather than mutable FeePayment.updatedAt balances.
+- Migration: 20260905010000_add_fee_payment_ledger.
+
+7. HTTP, export, and validation hardening
+- Production CORS uses the CORS_ORIGINS allowlist and Socket.IO uses the same origins.
+- Added common security response headers and trusted-proxy configuration.
+- Added per-IP limits for login, refresh, reset, OTP, registration, report export, generated PDFs, and attendance scans.
+- Unexpected 500 errors return a generic message and request ID while detailed errors remain server-side.
+- CSV exports prefix formula-like cell values to prevent spreadsheet formula execution.
+- Session and term validation rejects impossible dates and reversed ranges.
+- Grading validation rejects invalid bounds, duplicate grades, overlaps, gaps, and incomplete 0-100 coverage.
+- List pagination is bounded in the updated student, teacher, announcement, school, and bursar paths.
+- Swagger and OpenAPI routes return 404 in production unless EXPOSE_API_DOCS=true.
+
+8. Dependencies and quality gate
+- Compatible dependency updates and a qs 6.16.0 override removed all npm audit findings.
+- Added npm test and npm run verify scripts.
+- Added regression tests for date validation, grading invariants, CSV formula injection, and JWT issuer/audience/algorithm enforcement.
+
+Production deployment requirements
+
+1. Back up the production database and test both migrations against a recent staging copy.
+2. Deploy migrations before starting application instances that use the new Prisma client.
+3. Set NODE_ENV=production and configure JWT_KEY, JWT_ISSUER, JWT_AUDIENCE, PAYSTACK_SECRET_KEY, CRON_SECRET, SUPER_ADMIN_SECRET, and CORS_ORIGINS. JWT_KEY must be at least 32 characters.
+4. Set TRUST_PROXY_HOPS to match the actual load-balancer/proxy chain. The default is 1.
+5. Rotate JWT_KEY, SUPER_ADMIN_SECRET, PAYSTACK_SECRET_KEY, and CRON_SECRET if any current value may have appeared in logs, client code, tickets, or previous deployments.
+6. Update Socket.IO clients to provide the bearer token during the connection handshake. Do not send the old register event.
+7. Update the scheduler to POST /api/payment/cron with x-cron-secret. GET and query-string secrets are no longer accepted.
+8. Set CORS_ORIGINS to a comma-separated list of exact frontend origins. Requests from other browser origins will fail.
+9. Update fee-recording clients to send optional paymentMethod and reference. amountPaid remains cumulative; only its positive delta becomes a ledger event.
+10. Inform finance users that reducing amountPaid is no longer supported as an edit. A reviewed reversal endpoint/process must be introduced for corrections.
+11. Keep EXPOSE_API_DOCS unset or false unless public production API documentation is intentional.
+12. Run npm run verify in CI and block deployment on build, test, migration, or high-severity audit failure.
+
+Production behavior and compatibility impact
+
+- Existing access tokens now cause a database lookup on authenticated requests. This provides immediate revocation but increases database read load; monitor connection-pool capacity and authentication latency.
+- Password reset links generated before this deployment will no longer match because stored tokens are now hashes. Users must request a new reset link.
+- Deactivated accounts and accounts under inactive schools can no longer use still-valid access or refresh tokens.
+- Socket clients without a handshake token will be rejected.
+- Production startup will fail when required security configuration is missing.
+- Revenue date-range reports will include ledger transactions created after this feature is deployed. Existing cumulative FeePayment rows are not automatically treated as historically dated transactions because their true payment dates and installments cannot be reconstructed safely. Finance should approve a one-time import or opening-balance policy before comparing pre-deployment revenue periods.
+- Report access is narrower. Teachers should use teacher-portal/class workflows instead of general administrative reports.
+- API documentation is hidden in production by default.
+- The included rate limiter is process-local. For horizontally scaled or serverless production, add a shared Redis/gateway rate limiter so limits apply across all instances.
+
+Verification performed
+
+- npm test: passed, 4 tests passed and 0 failed.
+- TypeScript production build: passed as part of npm test.
+- npx prisma validate: passed.
+- npm audit: 0 vulnerabilities.
+- git diff --check: passed; only line-ending conversion warnings were reported.
+
+Remaining follow-up before declaring the entire audit fully closed
+
+- Run integration tests against a disposable PostgreSQL database for migrations, promotion concurrency/rollback, tenant isolation, role denials, Paystack signatures, refresh revocation, and fee-ledger behavior.
+- Add a reviewed fee reversal API and reconciliation process; the schema supports reversal linkage, but the public reversal workflow is not implemented in this batch.
+- Add a first-login password-change flag/flow for generated student credentials.
+- Replace the process-local rate limiter with shared infrastructure for multi-instance production.
+- Expand the four regression tests into the full authorization and workflow suite described in the audit, and wire it into CI.
+- Review existing fee data and decide whether to import verified historical transactions or begin ledger-based revenue reporting from the deployment cutover date.

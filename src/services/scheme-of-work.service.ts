@@ -56,7 +56,7 @@ export class SchemeOfWorkService {
     if (!subject) return failResponse("Subject not found.");
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
     });
     if (!term) return failResponse("Term not found.");
 
@@ -406,7 +406,7 @@ export class SchemeOfWorkService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 

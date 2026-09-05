@@ -23,13 +23,18 @@ export class FeeService {
     };
   }
 
-  static async recordPayment(schoolId: string, request: any) {
-    const student = await prisma.student.findFirst({
-      where: { id: request.studentId, schoolId },
-    });
+  static async recordPayment(schoolId: string, recordedByUserId: string, request: any) {
+    const [student, term] = await Promise.all([
+      prisma.student.findFirst({ where: { id: request.studentId, schoolId } }),
+      prisma.term.findFirst({ where: { id: request.termId, academicSession: { schoolId } } }),
+    ]);
 
     if (!student) {
       return failResponse("Student not found in this school.");
+    }
+    if (!term) return failResponse("Term not found in this school.");
+    if (request.academicSessionId !== term.academicSessionId) {
+      return failResponse("The selected term does not belong to the selected academic session.");
     }
 
     const existing = await prisma.feePayment.findFirst({
@@ -40,37 +45,64 @@ export class FeeService {
       },
     });
 
-    const status = request.amountPaid >= request.amountDue ? "Cleared" : "Pending";
-    let feeRecord;
-
-    if (existing) {
-      feeRecord = await prisma.feePayment.update({
-        where: { id: existing.id },
-        data: {
-          amountDue: request.amountDue,
-          amountPaid: request.amountPaid,
-          receiptImageUrl: request.receiptImageUrl || existing.receiptImageUrl,
-          description: request.description || existing.description,
-          status,
-          clearedAt: status === "Cleared" ? (existing.clearedAt ? existing.clearedAt : new Date()) : null,
-        },
-      });
-    } else {
-      feeRecord = await prisma.feePayment.create({
-        data: {
-          schoolId,
-          studentId: request.studentId,
-          termId: request.termId,
-          academicSessionId: request.academicSessionId,
-          amountDue: request.amountDue,
-          amountPaid: request.amountPaid,
-          receiptImageUrl: request.receiptImageUrl || "",
-          description: request.description || "",
-          status,
-          clearedAt: status === "Cleared" ? new Date() : null,
-        },
-      });
+    const previousAmountPaid = existing ? Number(existing.amountPaid) : 0;
+    if (request.amountPaid < previousAmountPaid) {
+      return failResponse("Recorded payments cannot be reduced. Create an explicit reversal transaction instead.");
     }
+    const paymentDelta = request.amountPaid - previousAmountPaid;
+    const reference = request.reference?.trim() || null;
+    if (reference && await prisma.feePaymentTransaction.findFirst({ where: { schoolId, reference } })) {
+      return failResponse("Payment reference has already been recorded.");
+    }
+
+    const status = request.amountPaid >= request.amountDue ? "Cleared" : "Pending";
+    const feeRecord = await prisma.$transaction(async (tx) => {
+      const fee = existing
+        ? await tx.feePayment.update({
+            where: { id: existing.id },
+            data: {
+              amountDue: request.amountDue,
+              amountPaid: request.amountPaid,
+              receiptImageUrl: request.receiptImageUrl || existing.receiptImageUrl,
+              description: request.description || existing.description,
+              status,
+              clearedAt: status === "Cleared" ? (existing.clearedAt || new Date()) : null,
+            },
+          })
+        : await tx.feePayment.create({
+            data: {
+              schoolId,
+              studentId: request.studentId,
+              termId: request.termId,
+              academicSessionId: term.academicSessionId,
+              amountDue: request.amountDue,
+              amountPaid: request.amountPaid,
+              receiptImageUrl: request.receiptImageUrl || "",
+              description: request.description || "",
+              status,
+              clearedAt: status === "Cleared" ? new Date() : null,
+            },
+          });
+
+      if (paymentDelta > 0) {
+        await tx.feePaymentTransaction.create({
+          data: {
+            schoolId,
+            feePaymentId: fee.id,
+            studentId: request.studentId,
+            termId: request.termId,
+            academicSessionId: term.academicSessionId,
+            amount: paymentDelta,
+            method: request.paymentMethod || "Manual",
+            reference,
+            description: request.description || "School fee payment",
+            recordedByUserId,
+          },
+        });
+      }
+
+      return fee;
+    });
 
     return successResponse(this.mapToResponse(feeRecord, student), "Fee payment recorded.");
   }
@@ -117,7 +149,7 @@ export class FeeService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 
@@ -191,7 +223,7 @@ export class FeeService {
 
     if (!fee) {
       const term = await prisma.term.findFirst({
-        where: { id: termId },
+        where: { id: termId, academicSession: { schoolId } },
       });
 
       if (!term) {
@@ -372,4 +404,3 @@ export class FeeService {
     return successResponse(pdfBuffer, "Fee receipt PDF generated successfully.");
   }
 }
-

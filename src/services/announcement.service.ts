@@ -1,8 +1,49 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
 import { NotificationService } from "./notification.service";
+import { Prisma } from "@prisma/client";
 
 export class AnnouncementService {
+  private static async getAudienceScope(
+    schoolId: string,
+    userId?: string,
+    userRole?: string
+  ): Promise<Prisma.AnnouncementWhereInput> {
+    if (userRole === "Student") {
+      const student = await prisma.student.findFirst({
+        where: { userId, schoolId },
+        select: { classId: true },
+      });
+      const audiences: Prisma.AnnouncementWhereInput[] = [
+        { audience: "All" },
+        { audience: "Students" },
+        { audience: "SpecificUser", targetUserId: userId },
+      ];
+      if (student?.classId) {
+        audiences.push({ audience: "Class", targetClassId: student.classId });
+      }
+      return { OR: audiences };
+    }
+    if (userRole === "Teacher") {
+      return {
+        OR: [
+          { audience: "All" },
+          { audience: "Teachers" },
+          { audience: "SpecificUser", targetUserId: userId },
+        ],
+      };
+    }
+    if (userRole === "Bursar") {
+      return {
+        OR: [
+          { audience: "All" },
+          { audience: "SpecificUser", targetUserId: userId },
+        ],
+      };
+    }
+    return {};
+  }
+
   private static mapToResponse(a: any) {
     return {
       id: a.id,
@@ -21,32 +62,7 @@ export class AnnouncementService {
   static async getAnnouncements(schoolId: string, params: any, userId?: string, userRole?: string) {
     const isAll = params.all === "true" || params.pageSize === "0" || params.pageSize === 0;
 
-    const where: any = { schoolId };
-
-    // Apply role-based scoping
-    if (userRole === "Student") {
-      const student = await prisma.student.findFirst({
-        where: { userId, schoolId },
-        select: { classId: true }
-      });
-      where.OR = [
-        { audience: "All" },
-        { audience: "Students" },
-        ...(student?.classId ? [{ audience: "Class", targetClassId: student.classId }] : []),
-        { audience: "SpecificUser", targetUserId: userId }
-      ];
-    } else if (userRole === "Teacher") {
-      where.OR = [
-        { audience: "All" },
-        { audience: "Teachers" },
-        { audience: "SpecificUser", targetUserId: userId }
-      ];
-    } else if (userRole === "Bursar") {
-      where.OR = [
-        { audience: "All" },
-        { audience: "SpecificUser", targetUserId: userId }
-      ];
-    }
+    const where: any = { schoolId, ...(await this.getAudienceScope(schoolId, userId, userRole)) };
 
     if (params.audience) {
       where.audience = params.audience;
@@ -57,8 +73,8 @@ export class AnnouncementService {
 
     const totalCount = await prisma.announcement.count({ where });
 
-    const pageNumber = isAll ? 1 : parseInt(params.pageNumber || "1", 10);
-    const pageSize = isAll ? (totalCount || 1) : parseInt(params.pageSize || "20", 10);
+    const pageNumber = isAll ? 1 : Math.max(1, parseInt(params.pageNumber || "1", 10) || 1);
+    const pageSize = Math.min(isAll ? (totalCount || 1) : Math.max(1, parseInt(params.pageSize || "20", 10) || 20), isAll ? 1000 : 100);
 
     const announcements = await prisma.announcement.findMany({
       where,
@@ -78,9 +94,15 @@ export class AnnouncementService {
     return successResponse(pagedResult);
   }
 
-  static async getAnnouncementById(schoolId: string, announcementId: string) {
+  static async getAnnouncementById(
+    schoolId: string,
+    announcementId: string,
+    userId?: string,
+    userRole?: string
+  ) {
+    const audienceScope = await this.getAudienceScope(schoolId, userId, userRole);
     const announcement = await prisma.announcement.findFirst({
-      where: { id: announcementId, schoolId },
+      where: { id: announcementId, schoolId, ...audienceScope },
       include: {
         createdByUser: { select: { name: true } },
       },
@@ -193,4 +215,3 @@ export class AnnouncementService {
     return successResponse(true, "Announcement deleted successfully.");
   }
 }
-

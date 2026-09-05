@@ -117,54 +117,50 @@ export class AuthService {
       });
     }
 
-    const school = await prisma.school.create({
-      data: {
-        name: request.schoolName,
-        address: request.address || "",
-        contactEmail: request.email.toLowerCase(),
-        contactPhone: request.phone || "",
-        slug,
-        planId: freePlan.id,
-        subscriptionStatus: "Active",
-        isActive: true,
-        schoolType: request.schoolType || null,
-        city: request.city || null,
-        state: request.state || null,
-        country: request.country || null,
-        studentCount: request.studentCount !== undefined ? request.studentCount : null,
-      },
-    });
-
     const hashedPassword = await hashPassword(request.password);
+    const { school, user, responseData } = await prisma.$transaction(async (tx) => {
+      const school = await tx.school.create({
+        data: {
+          name: request.schoolName,
+          address: request.address || "",
+          contactEmail: request.email.toLowerCase(),
+          contactPhone: request.phone || "",
+          slug,
+          planId: freePlan!.id,
+          subscriptionStatus: "Active",
+          isActive: true,
+          schoolType: request.schoolType || null,
+          city: request.city || null,
+          state: request.state || null,
+          country: request.country || null,
+          studentCount: request.studentCount !== undefined ? request.studentCount : null,
+        },
+      });
 
-    const user = await prisma.user.create({
-      data: {
-        schoolId: school.id,
-        name: request.adminName,
-        email: request.email.toLowerCase(),
-        passwordHash: hashedPassword,
-        role: "SchoolAdmin",
-        isActive: true,
-        adminRole: request.adminRole || null,
-        isVerified: true,
-      },
-    });
+      const user = await tx.user.create({
+        data: {
+          schoolId: school.id,
+          name: request.adminName,
+          email: request.email.toLowerCase(),
+          passwordHash: hashedPassword,
+          role: "SchoolAdmin",
+          isActive: true,
+          adminRole: request.adminRole || null,
+          isVerified: true,
+        },
+      });
 
-    const userWithSchool = {
-      ...user,
-      school: {
-        ...school,
-        plan: { name: "Free" }
-      }
-    };
-    const responseData = this.generateAuthResponseData(userWithSchool, school.name, school.logoUrl);
+      const userWithSchool = { ...user, school: { ...school, plan: { name: "Free" } } };
+      const responseData = this.generateAuthResponseData(userWithSchool, school.name, school.logoUrl);
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken: responseData.refreshToken,
+          refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken: responseData.refreshToken,
-        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      },
+      return { school, user, responseData };
     });
 
     emailService.sendSchoolWelcomeEmail(

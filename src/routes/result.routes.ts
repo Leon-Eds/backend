@@ -493,7 +493,7 @@ router.get("/editing-status/:classId", authMiddleware(["SchoolAdmin", "Teacher"]
  *       200:
  *         description: Result metadata updated successfully
  */
-router.patch("/metadata/:resultId", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ResultController.updateResultMetadata);
+router.patch("/metadata/:resultId", authMiddleware(["SchoolAdmin"]), requireSchoolId, ResultController.updateResultMetadata);
 
 /**
  * @swagger

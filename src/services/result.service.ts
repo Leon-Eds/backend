@@ -99,7 +99,7 @@ export class ResultService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 
@@ -427,7 +427,7 @@ export class ResultService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 
@@ -851,7 +851,7 @@ export class ResultService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 
@@ -935,7 +935,7 @@ export class ResultService {
 
   static async getApprovedResultsByTerm(schoolId: string, termId: string, classId?: string) {
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 
@@ -1055,4 +1055,3 @@ export class ResultService {
     }, "Approved class results for term retrieved successfully.");
   }
 }
-

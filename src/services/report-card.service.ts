@@ -145,7 +145,7 @@ export class ReportCardService {
 
     // Fetch term info for daysOpened, nextTermBegins
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true }
     });
 

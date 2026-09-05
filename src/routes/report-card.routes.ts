@@ -2,8 +2,10 @@ import { Router } from "express";
 import { ReportCardController } from "../controllers/report-card.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
+import { createRateLimiter } from "../middlewares/security.middleware";
 
 const router = Router();
+const pdfLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: "report-card-pdf" });
 
 /**
  * @swagger
@@ -41,7 +43,7 @@ const router = Router();
  *       403:
  *         description: Access denied
  */
-router.get("/my/:termId/pdf", authMiddleware(["Student"]), requireSchoolId, ReportCardController.downloadMyReportCard);
+router.get("/my/:termId/pdf", pdfLimit, authMiddleware(["Student"]), requireSchoolId, ReportCardController.downloadMyReportCard);
 
 /**
  * @swagger
@@ -107,7 +109,6 @@ router.get("/:studentId/:termId", authMiddleware(["SchoolAdmin", "Teacher"]), re
  *       200:
  *         description: Report card PDF generated and downloaded successfully
  */
-router.get("/:studentId/:termId/pdf", authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ReportCardController.downloadReportCardPdf);
+router.get("/:studentId/:termId/pdf", pdfLimit, authMiddleware(["SchoolAdmin", "Teacher"]), requireSchoolId, ReportCardController.downloadReportCardPdf);
 
 export default router;
-

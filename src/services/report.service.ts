@@ -287,25 +287,23 @@ export class ReportService {
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // include full end date
 
-    // Retrieve fee payments updated/cleared within date range
-    const payments = await prisma.feePayment.findMany({
+    const payments = await prisma.feePaymentTransaction.findMany({
       where: {
         schoolId,
-        updatedAt: {
+        createdAt: {
           gte: start,
           lte: end,
         },
-        amountPaid: { gt: 0 },
       },
       include: {
         student: {
           include: { class: true },
         },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { createdAt: "desc" },
     });
 
-    const totalReceived = payments.reduce((sum, p) => sum + Number(p.amountPaid), 0);
+    const totalReceived = payments.reduce((sum, p) => sum + Number(p.amount), 0);
 
     return successResponse({
       startDate: start.toISOString(),
@@ -317,8 +315,10 @@ export class ReportService {
         studentName: p.student.fullName,
         admissionNumber: p.student.admissionNumber,
         className: p.student.class ? `${p.student.class.name} ${p.student.class.arm}`.trim() : "Unassigned",
-        amountPaid: Number(p.amountPaid),
-        paymentDate: p.updatedAt || p.createdAt,
+        amountPaid: Number(p.amount),
+        paymentDate: p.createdAt,
+        paymentMethod: p.method,
+        reference: p.reference,
         description: p.description || "School fee payment",
       })),
     }, "Revenue report generated.");
@@ -636,9 +636,17 @@ export class ReportService {
         rows = [];
     }
 
+    const escapeCsvValue = (value: string) => {
+      const stringValue = String(value ?? "");
+      const formulaSafeValue = /^[\t\r\n ]*[=+\-@]/.test(stringValue)
+        ? `'${stringValue}`
+        : stringValue;
+      return `"${formulaSafeValue.replace(/"/g, '""')}"`;
+    };
+
     const csvContent = [
       headers.join(","),
-      ...rows.map((row) => row.map((val) => `"${val.replace(/"/g, '""')}"`).join(",")),
+      ...rows.map((row) => row.map(escapeCsvValue).join(",")),
     ].join("\n");
 
     return csvContent;

@@ -79,8 +79,8 @@ export class BursarService {
 
     const totalCount = await prisma.user.count({ where });
 
-    const pageNumber = isAll ? 1 : parseInt(params.pageNumber || "1", 10);
-    const pageSize = isAll ? (totalCount || 1) : parseInt(params.pageSize || "20", 10);
+    const pageNumber = isAll ? 1 : Math.max(1, parseInt(params.pageNumber || "1", 10) || 1);
+    const pageSize = Math.min(isAll ? (totalCount || 1) : Math.max(1, parseInt(params.pageSize || "20", 10) || 20), isAll ? 1000 : 100);
 
     const bursars = await prisma.user.findMany({
       where,
@@ -340,7 +340,7 @@ export class BursarService {
     let feeRecord;
 
     if (!fee) {
-      const term = await prisma.term.findFirst({ where: { id: termId } });
+      const term = await prisma.term.findFirst({ where: { id: termId, academicSession: { schoolId } } });
       if (!term) return failResponse("Term not found.");
 
       feeRecord = await prisma.feePayment.create({
@@ -379,7 +379,7 @@ export class BursarService {
    */
   static async getSchoolFeeReport(schoolId: string, termId: string) {
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 

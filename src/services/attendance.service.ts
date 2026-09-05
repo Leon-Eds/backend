@@ -141,6 +141,18 @@ export class AttendanceService {
 
     const parsedDate = new Date(`${request.date}T00:00:00.000Z`);
 
+    const requestedStudentIds = request.records.map((record: any) => record.studentId);
+    if (new Set(requestedStudentIds).size !== requestedStudentIds.length) {
+      return failResponse("Attendance records contain duplicate student identifiers.");
+    }
+    const eligibleStudents = await prisma.student.findMany({
+      where: { id: { in: requestedStudentIds }, schoolId, classId, status: "Active" },
+      select: { id: true },
+    });
+    if (eligibleStudents.length !== requestedStudentIds.length) {
+      return failResponse("Every attendance record must reference an active student in this class.");
+    }
+
     // Create or update records in a transaction
     const operations = request.records.map((rec: any) => {
       const data = {
@@ -252,7 +264,7 @@ export class AttendanceService {
     let term;
     if (termId) {
       term = await prisma.term.findFirst({
-        where: { id: termId },
+        where: { id: termId, academicSession: { schoolId } },
         include: { academicSession: true },
       });
     } else {
@@ -521,4 +533,3 @@ export class AttendanceService {
     }, "Daily attendance summary retrieved successfully.");
   }
 }
-

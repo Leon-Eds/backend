@@ -2,10 +2,12 @@ import { Router } from "express";
 import { StudentController } from "../controllers/student.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
+import { createRateLimiter } from "../middlewares/security.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
 import { createStudentSchema, updateStudentSchema } from "../validations/student.validation";
 
 const router = Router();
+const pdfLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: "student-id-pdf" });
 
 /**
  * @swagger
@@ -54,7 +56,7 @@ router.get("/idcard/data", authMiddleware(["Student"]), requireSchoolId, Student
  *       200:
  *         description: Student ID card PDF downloaded successfully
  */
-router.get("/idcard/pdf", authMiddleware(["Student"]), requireSchoolId, StudentController.downloadMyIdCardPdf);
+router.get("/idcard/pdf", pdfLimit, authMiddleware(["Student"]), requireSchoolId, StudentController.downloadMyIdCardPdf);
 
 /**
  * @swagger
@@ -108,7 +110,7 @@ router.get("/:id/idcard", authMiddleware(["SuperAdmin", "SchoolAdmin"]), require
  *       200:
  *         description: Student ID card PDF downloaded successfully
  */
-router.get("/:id/idcard/pdf", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.downloadStudentIdCardPdf);
+router.get("/:id/idcard/pdf", pdfLimit, authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId, StudentController.downloadStudentIdCardPdf);
 
 router.use(authMiddleware(["SuperAdmin", "SchoolAdmin", "Bursar"]));
 router.use(requireSchoolId);

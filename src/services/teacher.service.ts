@@ -119,36 +119,38 @@ export class TeacherService {
 
     const hashedPassword = await hashPassword(request.password);
 
-    const user = await prisma.user.create({
-      data: {
-        schoolId,
-        name: request.fullName,
-        email: request.email.toLowerCase(),
-        passwordHash: hashedPassword,
-        role: "Teacher",
-        isActive: true,
-        isVerified: true,
-      },
-    });
+    const teacher = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          schoolId,
+          name: request.fullName,
+          email: request.email.toLowerCase(),
+          passwordHash: hashedPassword,
+          role: "Teacher",
+          isActive: true,
+          isVerified: true,
+        },
+      });
 
-    const teacher = await prisma.teacher.create({
-      data: {
-        schoolId,
-        userId: user.id,
-        fullName: request.fullName,
-        email: request.email.toLowerCase(),
-        phone: request.phone || "",
-        profilePictureUrl: request.profilePictureUrl || "",
-        isActive: true,
-      },
-      include: {
-        subjectAssignments: {
-          include: {
-            subject: true,
-            class: true,
+      return tx.teacher.create({
+        data: {
+          schoolId,
+          userId: user.id,
+          fullName: request.fullName,
+          email: request.email.toLowerCase(),
+          phone: request.phone || "",
+          profilePictureUrl: request.profilePictureUrl || "",
+          isActive: true,
+        },
+        include: {
+          subjectAssignments: {
+            include: {
+              subject: true,
+              class: true,
+            },
           },
         },
-      },
+      });
     });
 
     // Send teacher onboarding email asynchronously

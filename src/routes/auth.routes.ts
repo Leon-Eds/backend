@@ -2,6 +2,7 @@ import { Router } from "express";
 import { AuthController } from "../controllers/auth.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
+import { createRateLimiter } from "../middlewares/security.middleware";
 import {
   loginSchema,
   registerSchoolSchema,
@@ -15,6 +16,9 @@ import {
 } from "../validations/auth.validation";
 
 const router = Router();
+const authAttemptLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10, keyPrefix: "auth-attempt" });
+const authRequestLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5, keyPrefix: "auth-request" });
+const registrationLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 5, keyPrefix: "auth-registration" });
 
 /**
  * @swagger
@@ -56,7 +60,7 @@ const router = Router();
  *       400:
  *         description: Bad request
  */
-router.post("/create-super-admin", validateBody(createSuperAdminSchema), AuthController.createSuperAdmin);
+router.post("/create-super-admin", registrationLimit, validateBody(createSuperAdminSchema), AuthController.createSuperAdmin);
 
 /**
  * @swagger
@@ -110,7 +114,7 @@ router.post("/create-super-admin", validateBody(createSuperAdminSchema), AuthCon
  *       400:
  *         description: Bad request
  */
-router.post("/register", validateBody(registerSchoolSchema), AuthController.register);
+router.post("/register", registrationLimit, validateBody(registerSchoolSchema), AuthController.register);
 
 /**
  * @swagger
@@ -139,7 +143,7 @@ router.post("/register", validateBody(registerSchoolSchema), AuthController.regi
  *       401:
  *         description: Unauthorized
  */
-router.post("/login", validateBody(loginSchema), AuthController.login);
+router.post("/login", authAttemptLimit, validateBody(loginSchema), AuthController.login);
 
 /**
  * @swagger
@@ -164,7 +168,7 @@ router.post("/login", validateBody(loginSchema), AuthController.login);
  *       401:
  *         description: Unauthorized
  */
-router.post("/refresh-token", validateBody(refreshTokenSchema), AuthController.refreshToken);
+router.post("/refresh-token", authAttemptLimit, validateBody(refreshTokenSchema), AuthController.refreshToken);
 
 /**
  * @swagger
@@ -236,7 +240,7 @@ router.post("/logout", authMiddleware(), AuthController.logout);
  *       400:
  *         description: Bad request
  */
-router.post("/forgot-password", validateBody(forgotPasswordSchema), AuthController.forgotPassword);
+router.post("/forgot-password", authRequestLimit, validateBody(forgotPasswordSchema), AuthController.forgotPassword);
 
 /**
  * @swagger
@@ -264,7 +268,7 @@ router.post("/forgot-password", validateBody(forgotPasswordSchema), AuthControll
  *       400:
  *         description: Invalid or expired token
  */
-router.post("/reset-password", validateBody(resetPasswordSchema), AuthController.resetPassword);
+router.post("/reset-password", authAttemptLimit, validateBody(resetPasswordSchema), AuthController.resetPassword);
 
 /**
  * @swagger
@@ -293,7 +297,7 @@ router.post("/reset-password", validateBody(resetPasswordSchema), AuthController
  *       400:
  *         description: Invalid or expired OTP
  */
-router.post("/verify-otp", validateBody(verifyOtpSchema), AuthController.verifyOtp);
+router.post("/verify-otp", authAttemptLimit, validateBody(verifyOtpSchema), AuthController.verifyOtp);
 
 /**
  * @swagger
@@ -319,6 +323,6 @@ router.post("/verify-otp", validateBody(verifyOtpSchema), AuthController.verifyO
  *       400:
  *         description: User not found or already verified
  */
-router.post("/resend-otp", validateBody(resendOtpSchema), AuthController.resendOtp);
+router.post("/resend-otp", authRequestLimit, validateBody(resendOtpSchema), AuthController.resendOtp);
 
 export default router;

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon --watch src --watch .env src/index.ts",
     "build": "tsc && node -e \"require('fs').cpSync('src/templates', 'dist/templates', { recursive: true })\"",
+    "test": "npm run build && node --test dist/tests/security.test.js",
+    "verify": "npm run test && npm audit --audit-level=high",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -47,5 +49,8 @@
     "prisma": "^5.14.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
+  },
+  "overrides": {
+    "qs": "6.16.0"
   }
 }

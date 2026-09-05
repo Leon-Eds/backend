@@ -525,7 +525,7 @@ export class TeacherPortalService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: payload.termId },
+      where: { id: payload.termId, academicSession: { schoolId } },
     });
 
     if (!term) return failResponse("Term not found.");

@@ -2,8 +2,10 @@ import { Router } from "express";
 import { ReportController } from "../controllers/report.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
+import { createRateLimiter } from "../middlewares/security.middleware";
 
 const router = Router();
+const exportLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20, keyPrefix: "report-export" });
 
 /**
  * @swagger
@@ -315,6 +317,6 @@ router.get("/outstandingfees", authMiddleware(["SchoolAdmin", "Bursar"]), requir
  *       200:
  *         description: Exported report file
  */
-router.get("/export", authMiddleware(["SchoolAdmin", "Bursar"]), requireSchoolId, ReportController.exportReport);
+router.get("/export", exportLimit, authMiddleware(["SchoolAdmin", "Bursar"]), requireSchoolId, ReportController.exportReport);
 
 export default router;

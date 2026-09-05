@@ -9,7 +9,7 @@ export class FeeController {
   static async recordPayment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;
-      const result = await FeeService.recordPayment(schoolId, req.body);
+      const result = await FeeService.recordPayment(schoolId, req.user!.id, req.body);
       if (result.success) {
         return res.status(200).json(result);
       }
@@ -133,4 +133,3 @@ export class FeeController {
     }
   }
 }
-

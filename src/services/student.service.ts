@@ -3,6 +3,7 @@ import { hashPassword } from "../utils/bcrypt";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
 import crypto from "crypto";
 import { emailService } from "../utils/email";
+import { Prisma } from "@prisma/client";
 
 export class StudentService {
 
@@ -47,7 +48,8 @@ export class StudentService {
    */
   private static async findOrCreateParent(
     schoolId: string,
-    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string; parentRelationship?: string }
+    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string; parentRelationship?: string },
+    client: Prisma.TransactionClient | typeof prisma = prisma
   ) {
     if (!data.parentEmail || data.parentEmail.trim() === "") {
       return null;
@@ -56,7 +58,7 @@ export class StudentService {
     const email = data.parentEmail.trim().toLowerCase();
 
     // Check if parent already exists in this school
-    let parent = await prisma.parent.findUnique({
+    let parent = await client.parent.findUnique({
       where: {
         schoolId_email: {
           schoolId,
@@ -85,7 +87,7 @@ export class StudentService {
       }
 
       if (Object.keys(updateData).length > 0) {
-        parent = await prisma.parent.update({
+        parent = await client.parent.update({
           where: { id: parent.id },
           data: updateData,
         });
@@ -95,7 +97,7 @@ export class StudentService {
     }
 
     // Create new parent
-    parent = await prisma.parent.create({
+    parent = await client.parent.create({
       data: {
         schoolId,
         fullName: data.parentName || "",
@@ -262,66 +264,63 @@ export class StudentService {
       ? request.password.trim()
       : crypto.randomBytes(15).toString("base64url");
     const hashedPassword = await hashPassword(rawPassword);
-    const user = await prisma.user.create({
-      data: {
-        schoolId,
-        name: request.fullName,
-        email: loginEmail,
-        passwordHash: hashedPassword,
-        role: "Student",
-        isActive: true,
-        isVerified: true,
-      },
-    });
-
-    // 4. Find or create parent record
     const parentRelationship = request.relationship || request.parentRelationship || "";
-    const parent = await this.findOrCreateParent(schoolId, {
-      parentName: request.parentName || "",
-      parentEmail: request.parentEmail || "",
-      parentPhone: request.parentPhone || "",
-      parentPassportUrl: request.parentPassportUrl || "",
-      parentIdNumber: request.parentIdNumber || "",
-      parentRelationship,
-    });
-
-    // Handle date parsing safely
     const dob = request.dateOfBirth ? new Date(request.dateOfBirth) : null;
-
-    const student = await prisma.student.create({
-      data: {
-        schoolId,
-        userId: user.id,
-        parentId: parent?.id || null,
-        fullName: request.fullName,
-        admissionNumber: admNo,
-        gender: request.gender,
-        dateOfBirth: dob,
-        classId: request.classId || null,
-        profilePictureUrl: request.profilePictureUrl || "",
-        status: "Active",
-        arm: request.arm || null,
-        bloodGroup: request.bloodGroup || null,
-      },
-      include: {
-        class: true,
-        user: true,
-        parent: true,
-      },
-    });
-
-    if (enrollmentClass?.academicSessionId) {
-      await prisma.studentEnrollment.create({
+    const { student, parent } = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
         data: {
           schoolId,
-          studentId: student.id,
-          academicSessionId: enrollmentClass.academicSessionId,
-          classId: enrollmentClass.id,
-          status: "Active",
-          startedAt: student.enrolledAt,
+          name: request.fullName,
+          email: loginEmail,
+          passwordHash: hashedPassword,
+          role: "Student",
+          isActive: true,
+          isVerified: true,
         },
       });
-    }
+
+      const parent = await this.findOrCreateParent(schoolId, {
+        parentName: request.parentName || "",
+        parentEmail: request.parentEmail || "",
+        parentPhone: request.parentPhone || "",
+        parentPassportUrl: request.parentPassportUrl || "",
+        parentIdNumber: request.parentIdNumber || "",
+        parentRelationship,
+      }, tx);
+
+      const student = await tx.student.create({
+        data: {
+          schoolId,
+          userId: user.id,
+          parentId: parent?.id || null,
+          fullName: request.fullName,
+          admissionNumber: admNo,
+          gender: request.gender,
+          dateOfBirth: dob,
+          classId: request.classId || null,
+          profilePictureUrl: request.profilePictureUrl || "",
+          status: "Active",
+          arm: request.arm || null,
+          bloodGroup: request.bloodGroup || null,
+        },
+        include: { class: true, user: true, parent: true },
+      });
+
+      if (enrollmentClass?.academicSessionId) {
+        await tx.studentEnrollment.create({
+          data: {
+            schoolId,
+            studentId: student.id,
+            academicSessionId: enrollmentClass.academicSessionId,
+            classId: enrollmentClass.id,
+            status: "Active",
+            startedAt: student.enrolledAt,
+          },
+        });
+      }
+
+      return { student, parent };
+    });
 
     // Send student/parent onboarding email asynchronously
     const parentEmail = parent?.email || "";

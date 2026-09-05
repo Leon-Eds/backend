@@ -4,8 +4,10 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
 import { recordFeePaymentSchema, uploadReceiptSchema } from "../validations/fee.validation";
+import { createRateLimiter } from "../middlewares/security.middleware";
 
 const router = Router();
+const pdfLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: "fee-pdf" });
 
 
 /**
@@ -56,6 +58,12 @@ const router = Router();
  *                 type: number
  *               amountPaid:
  *                 type: number
+ *               paymentMethod:
+ *                 type: string
+ *                 description: Payment channel such as Cash, Transfer, POS, or Card
+ *               reference:
+ *                 type: string
+ *                 description: Unique payment reference within the school
  *     responses:
  *       200:
  *         description: Fee payment recorded successfully
@@ -235,6 +243,6 @@ router.post("/upload-receipt", authMiddleware(["Student"]), requireSchoolId, val
 router.get("/my-status", authMiddleware(["Student"]), requireSchoolId, FeeController.getMyFeeStatus);
 
 // Download PDF receipt for a payment transaction
-router.get("/receipt/:paymentId/pdf", authMiddleware(["Student", "Bursar", "SchoolAdmin", "SuperAdmin"]), requireSchoolId, FeeController.downloadReceiptPdf);
+router.get("/receipt/:paymentId/pdf", pdfLimit, authMiddleware(["Student", "Bursar", "SchoolAdmin", "SuperAdmin"]), requireSchoolId, FeeController.downloadReceiptPdf);
 
 export default router;

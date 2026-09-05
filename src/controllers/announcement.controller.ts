@@ -27,7 +27,12 @@ export class AnnouncementController {
       if (!schoolId) {
         return res.status(400).json({ success: false, message: "School context required." });
       }
-      const result = await AnnouncementService.getAnnouncementById(schoolId, req.params.id);
+      const result = await AnnouncementService.getAnnouncementById(
+        schoolId,
+        req.params.id,
+        req.user?.id,
+        req.user?.role
+      );
       if (result.success) {
         return res.status(200).json(result);
       }

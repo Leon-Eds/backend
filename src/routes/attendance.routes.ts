@@ -4,8 +4,10 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
 import { recordAttendanceSchema, scanAttendanceSchema } from "../validations/attendance.validation";
+import { createRateLimiter } from "../middlewares/security.middleware";
 
 const router = Router();
+const scanLimit = createRateLimiter({ windowMs: 60 * 1000, max: 120, keyPrefix: "attendance-scan" });
 
 /**
  * @swagger
@@ -224,6 +226,7 @@ router.get(
 // Scan student ID card QR code to mark attendance
 router.post(
   "/scan",
+  scanLimit,
   authMiddleware(["SchoolAdmin", "Teacher"]),
   requireSchoolId,
   validateBody(scanAttendanceSchema),
