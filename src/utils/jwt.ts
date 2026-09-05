@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { requireEnvironmentVariable } from "../config/env";
 
 export interface TokenResponse {
   token: string;
@@ -7,8 +8,25 @@ export interface TokenResponse {
   tokenExpiry: Date;
 }
 
+export interface AccessTokenClaims extends jwt.JwtPayload {
+  nameid?: string;
+  email?: string;
+  unique_name?: string;
+  role?: string;
+  SchoolId?: string;
+  isVerified?: boolean;
+}
+
+function getJwtSettings() {
+  return {
+    secret: requireEnvironmentVariable("JWT_KEY"),
+    issuer: requireEnvironmentVariable("JWT_ISSUER"),
+    audience: requireEnvironmentVariable("JWT_AUDIENCE"),
+  };
+}
+
 export function generateJwtToken(user: { id: string; email: string; name: string; role: string; schoolId?: string | null; isVerified?: boolean }): string {
-  const secret = process.env.JWT_KEY || "SuperSecretDefaultKeyForLeonEdBackendNodeJSNodeJSNodeJSNodeJSNodeJSNodeJS";
+  const { secret, issuer, audience } = getJwtSettings();
   const expiryMinutes = parseInt(process.env.JWT_EXPIRY_MINUTES || "60", 10);
 
   const payload = {
@@ -22,10 +40,20 @@ export function generateJwtToken(user: { id: string; email: string; name: string
   };
 
   return jwt.sign(payload, secret, {
-    issuer: process.env.JWT_ISSUER || "LeonEdBackend",
-    audience: process.env.JWT_AUDIENCE || "LeonEdFrontend",
+    algorithm: "HS256",
+    issuer,
+    audience,
     expiresIn: `${expiryMinutes}m`,
   });
+}
+
+export function verifyJwtToken(token: string): AccessTokenClaims {
+  const { secret, issuer, audience } = getJwtSettings();
+  return jwt.verify(token, secret, {
+    algorithms: ["HS256"],
+    issuer,
+    audience,
+  }) as AccessTokenClaims;
 }
 
 export function generateRefreshToken(): string {

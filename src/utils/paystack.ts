@@ -7,6 +7,9 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 
 class PaystackClient {
   private getHeaders() {
+    if (!PAYSTACK_SECRET_KEY) {
+      throw new Error("PAYSTACK_SECRET_KEY is not configured.");
+    }
     return {
       Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
       "Content-Type": "application/json",
@@ -21,13 +24,7 @@ class PaystackClient {
    */
   async createPlan(name: string, amount: number) {
     if (!PAYSTACK_SECRET_KEY) {
-      console.warn("[PaystackClient] PAYSTACK_SECRET_KEY is not configured. Simulating plan creation.");
-      return {
-        success: true,
-        data: {
-          plan_code: `PLN_simulated_${Math.random().toString(36).substring(7)}`,
-        },
-      };
+      throw new Error("PAYSTACK_SECRET_KEY is not configured.");
     }
 
     try {
@@ -61,9 +58,8 @@ class PaystackClient {
    * @param name New name of the plan
    */
   async updatePlan(planCode: string, name: string) {
-    if (!PAYSTACK_SECRET_KEY || planCode.startsWith("PLN_simulated_")) {
-      console.warn("[PaystackClient] PAYSTACK_SECRET_KEY is not configured. Simulating plan update.");
-      return { success: true };
+    if (!PAYSTACK_SECRET_KEY) {
+      throw new Error("PAYSTACK_SECRET_KEY is not configured.");
     }
 
     try {
@@ -101,15 +97,7 @@ class PaystackClient {
     metadata: any
   ) {
     if (!PAYSTACK_SECRET_KEY) {
-      console.warn("[PaystackClient] PAYSTACK_SECRET_KEY is not configured. Simulating transaction initialization.");
-      const reference = `REF_simulated_${Math.random().toString(36).substring(7)}`;
-      return {
-        success: true,
-        data: {
-          authorization_url: `https://checkout.paystack.com/mock-checkout?reference=${reference}&plan=${planCode}&email=${email}`,
-          reference,
-        },
-      };
+      throw new Error("PAYSTACK_SECRET_KEY is not configured.");
     }
 
     try {
@@ -143,9 +131,8 @@ class PaystackClient {
    * @param emailToken Paystack email token
    */
   async disableSubscription(subscriptionCode: string, emailToken: string) {
-    if (!PAYSTACK_SECRET_KEY || subscriptionCode.startsWith("SUB_simulated_")) {
-      console.warn("[PaystackClient] PAYSTACK_SECRET_KEY is not configured. Simulating subscription cancellation.");
-      return { success: true };
+    if (!PAYSTACK_SECRET_KEY) {
+      throw new Error("PAYSTACK_SECRET_KEY is not configured.");
     }
 
     try {

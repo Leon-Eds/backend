@@ -143,6 +143,10 @@ router.post("/", authMiddleware(["SuperAdmin", "SchoolAdmin"]), requireSchoolId,
  *                 type: string
  *               arm:
  *                 type: string
+ *               academicSessionId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Can only be set when the class is not already assigned to a session
  *               formTeacherId:
  *                 type: string
  *                 format: uuid

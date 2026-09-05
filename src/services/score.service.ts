@@ -83,11 +83,11 @@ export class ScoreService {
     }
 
     const student = await prisma.student.findFirst({
-      where: { id: request.studentId, schoolId },
+      where: { id: request.studentId, schoolId, classId: request.classId, status: "Active" },
     });
 
     if (!student) {
-      return failResponse("Student not found in this school.");
+      return failResponse("Student must be active and assigned to the selected class.");
     }
 
     const subject = await prisma.subject.findFirst({
@@ -96,6 +96,21 @@ export class ScoreService {
 
     if (!subject) {
       return failResponse("Subject not found in this school.");
+    }
+
+    const [term, classSubject] = await Promise.all([
+      prisma.term.findFirst({
+        where: { id: request.termId, academicSession: { schoolId } },
+      }),
+      prisma.classSubject.findFirst({
+        where: { classId: request.classId, subjectId: request.subjectId },
+      }),
+    ]);
+    if (!term || !classEntity.academicSessionId || term.academicSessionId !== classEntity.academicSessionId) {
+      return failResponse("The selected term and class must belong to the same school academic session.");
+    }
+    if (!classSubject) {
+      return failResponse("The selected subject is not assigned to this class.");
     }
 
     // Check if scores are locked (result already submitted/approved/published)
@@ -149,7 +164,7 @@ export class ScoreService {
           subjectId: request.subjectId,
           classId: request.classId,
           termId: request.termId,
-          academicSessionId: request.academicSessionId,
+          academicSessionId: term.academicSessionId,
           firstCA: request.firstCA,
           secondCA: request.secondCA,
           exam: request.exam,
@@ -216,6 +231,38 @@ export class ScoreService {
       return failResponse("Subject not found in this school.");
     }
 
+    const [term, classSubject] = await Promise.all([
+      prisma.term.findFirst({
+        where: { id: request.termId, academicSession: { schoolId } },
+      }),
+      prisma.classSubject.findFirst({
+        where: { classId: request.classId, subjectId: request.subjectId },
+      }),
+    ]);
+    if (!term || !classEntity.academicSessionId || term.academicSessionId !== classEntity.academicSessionId) {
+      return failResponse("The selected term and class must belong to the same school academic session.");
+    }
+    if (!classSubject) {
+      return failResponse("The selected subject is not assigned to this class.");
+    }
+
+    const requestedStudentIds = request.scores.map((entry: any) => entry.studentId);
+    if (new Set(requestedStudentIds).size !== requestedStudentIds.length) {
+      return failResponse("The bulk score request contains duplicate students.");
+    }
+    const eligibleStudents = await prisma.student.findMany({
+      where: {
+        id: { in: requestedStudentIds },
+        schoolId,
+        classId: request.classId,
+        status: "Active",
+      },
+      select: { id: true },
+    });
+    if (eligibleStudents.length !== requestedStudentIds.length) {
+      return failResponse("Every score must reference an active student in the selected class.");
+    }
+
     const responses: any[] = [];
 
     // Run sequentially to ensure proper database locking/transactions or simplicity
@@ -234,7 +281,7 @@ export class ScoreService {
 
     for (const entry of request.scores) {
       const student = await prisma.student.findFirst({
-        where: { id: entry.studentId, schoolId },
+        where: { id: entry.studentId, schoolId, classId: request.classId, status: "Active" },
       });
 
       if (!student) continue;
@@ -275,7 +322,7 @@ export class ScoreService {
             subjectId: request.subjectId,
             classId: request.classId,
             termId: request.termId,
-            academicSessionId: request.academicSessionId,
+            academicSessionId: term.academicSessionId,
             firstCA: entry.firstCA,
             secondCA: entry.secondCA,
             exam: entry.exam,
@@ -317,7 +364,7 @@ export class ScoreService {
     }
 
     const term = await prisma.term.findFirst({
-      where: { id: termId },
+      where: { id: termId, academicSession: { schoolId } },
       include: { academicSession: true },
     });
 

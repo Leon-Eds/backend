@@ -253,7 +253,7 @@ router.get("/:id", StudentController.getById);
  *                 description: Alias for parentRelationship
  *               password:
  *                 type: string
- *                 description: Optional login password for the student account (defaults to Student@123! if not provided)
+ *                 description: Optional login password for the student account (a unique temporary credential is generated if omitted)
  *               profilePictureUrl:
  *                 type: string
  *                 description: URL of the student's profile picture

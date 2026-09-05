@@ -41,9 +41,9 @@ export class AuthService {
       where: { role: "SuperAdmin" },
     });
 
-    // if (existingSuperAdmin) {
-    //   return failResponse("A Super Admin already exists.");
-    // }
+    if (existingSuperAdmin) {
+      return failResponse("A Super Admin already exists. Use an authenticated administrative process to manage administrators.");
+    }
 
     const existingEmail = await prisma.user.findFirst({
       where: { email: request.email.toLowerCase() },
@@ -245,7 +245,14 @@ export class AuthService {
       include: { school: { include: { plan: true } } },
     });
 
-    if (!user || !user.refreshTokenExpiry || user.refreshTokenExpiry < new Date()) {
+    if (
+      !user ||
+      !user.isActive ||
+      !user.isVerified ||
+      !user.refreshTokenExpiry ||
+      user.refreshTokenExpiry < new Date() ||
+      (user.role !== "SuperAdmin" && !user.school?.isActive)
+    ) {
       return failResponse("Invalid or expired refresh token.");
     }
 
@@ -263,11 +270,6 @@ export class AuthService {
   }
 
   static async changePassword(userId: string, userRole: string, request: any) {
-    // Students are not allowed to change their passwords
-    if (userRole === "Student") {
-      return failResponse("Students are not permitted to change their password. Contact your school administrator.");
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -284,7 +286,11 @@ export class AuthService {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: hashedPassword },
+      data: {
+        passwordHash: hashedPassword,
+        refreshToken: null,
+        refreshTokenExpiry: null,
+      },
     });
 
     return successResponse(true, "Password changed successfully.");
@@ -313,12 +319,13 @@ export class AuthService {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const resetExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordResetToken: resetToken,
+        passwordResetToken: resetTokenHash,
         passwordResetExpiry: resetExpiry,
       },
     });
@@ -327,17 +334,13 @@ export class AuthService {
     emailService.sendPasswordResetEmail(user.email, user.name, resetToken)
       .catch((err) => console.error("[AuthService] Password reset email error:", err));
 
-    // In production, send email with reset link containing the token.
-    // For now, return the token directly for development/testing.
-    return successResponse(
-      { resetToken, expiresAt: resetExpiry },
-      "If an account with that email exists, a password reset link has been sent."
-    );
+    return successResponse(true, "If an account with that email exists, a password reset link has been sent.");
   }
 
   static async resetPassword(request: any) {
+    const resetTokenHash = crypto.createHash("sha256").update(request.token).digest("hex");
     const user = await prisma.user.findFirst({
-      where: { passwordResetToken: request.token },
+      where: { passwordResetToken: resetTokenHash },
     });
 
     if (!user) {
@@ -356,6 +359,8 @@ export class AuthService {
         passwordHash: hashedPassword,
         passwordResetToken: null,
         passwordResetExpiry: null,
+        refreshToken: null,
+        refreshTokenExpiry: null,
       },
     });
 

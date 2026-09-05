@@ -187,6 +187,16 @@ export class StudentService {
       );
     }
 
+    const enrollmentClass = request.classId
+      ? await prisma.class.findFirst({
+          where: { id: request.classId, schoolId },
+          select: { id: true, academicSessionId: true },
+        })
+      : null;
+    if (request.classId && !enrollmentClass) {
+      return failResponse("Class not found in this school.");
+    }
+
     // 1. Generate prefix based on school initials & differentiator
     function getSchoolInitials(name: string): string {
       const words = name.trim().split(/\s+/).filter(w => w.length > 0);
@@ -248,7 +258,9 @@ export class StudentService {
       return failResponse("A student account with this admission number already exists.");
     }
 
-    const rawPassword = request.password && request.password.trim() ? request.password.trim() : "Student@123!";
+    const rawPassword = request.password && request.password.trim()
+      ? request.password.trim()
+      : crypto.randomBytes(15).toString("base64url");
     const hashedPassword = await hashPassword(rawPassword);
     const user = await prisma.user.create({
       data: {
@@ -298,6 +310,19 @@ export class StudentService {
       },
     });
 
+    if (enrollmentClass?.academicSessionId) {
+      await prisma.studentEnrollment.create({
+        data: {
+          schoolId,
+          studentId: student.id,
+          academicSessionId: enrollmentClass.academicSessionId,
+          classId: enrollmentClass.id,
+          status: "Active",
+          startedAt: student.enrolledAt,
+        },
+      });
+    }
+
     // Send student/parent onboarding email asynchronously
     const parentEmail = parent?.email || "";
     const parentName = parent?.fullName || "";
@@ -319,11 +344,29 @@ export class StudentService {
   static async updateStudent(schoolId: string, studentId: string, request: any) {
     const student = await prisma.student.findFirst({
       where: { id: studentId, schoolId },
-      include: { user: true, parent: true },
+      include: { user: true, parent: true, class: true },
     });
 
     if (!student) {
       return failResponse("Student not found.");
+    }
+
+    let targetClass: { id: string; academicSessionId: string | null } | null = null;
+    if (request.classId) {
+      targetClass = await prisma.class.findFirst({
+        where: { id: request.classId, schoolId },
+        select: { id: true, academicSessionId: true },
+      });
+      if (!targetClass) return failResponse("Class not found in this school.");
+      if (
+        student.class?.academicSessionId &&
+        targetClass.academicSessionId &&
+        student.class.academicSessionId !== targetClass.academicSessionId
+      ) {
+        return failResponse(
+          "Use the promotion flow to move a student into a class in a different academic session."
+        );
+      }
     }
 
     // Handle parent update: if parent details are provided, find-or-create/update
@@ -395,6 +438,26 @@ export class StudentService {
         parent: true,
       },
     });
+
+    if (targetClass?.academicSessionId) {
+      await prisma.studentEnrollment.upsert({
+        where: {
+          studentId_academicSessionId: {
+            studentId,
+            academicSessionId: targetClass.academicSessionId,
+          },
+        },
+        create: {
+          schoolId,
+          studentId,
+          academicSessionId: targetClass.academicSessionId,
+          classId: targetClass.id,
+          status: "Active",
+          startedAt: updatedStudent.enrolledAt,
+        },
+        update: { classId: targetClass.id },
+      });
+    }
 
     if (request.fullName !== undefined && student.userId) {
       await prisma.user.update({

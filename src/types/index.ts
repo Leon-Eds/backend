@@ -20,6 +20,7 @@ declare global {
     interface Request {
       user?: UserPayload;
       schoolId?: string;
+      rawBody?: Buffer;
     }
   }
 }

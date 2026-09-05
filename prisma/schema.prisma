@@ -36,6 +36,14 @@ enum StudentStatus {
   Left
 }
 
+enum EnrollmentStatus {
+  Active
+  Promoted
+  Graduated
+  Left
+  Archived
+}
+
 enum Gender {
   Male
   Female
@@ -136,6 +144,7 @@ model School {
   parents          Parent[]
   subscriptionPayments SubscriptionPaymentLog[]
   schemesOfWork    SchemeOfWork[]
+  studentEnrollments StudentEnrollment[]
 }
 
 model User {
@@ -212,6 +221,7 @@ model Student {
   results         Result[]
   feePayments     FeePayment[]
   attendances     Attendance[]
+  enrollments     StudentEnrollment[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -263,6 +273,8 @@ model Class {
   results            Result[]
   attendances        Attendance[]
   schemesOfWork      SchemeOfWork[]
+  enrollments         StudentEnrollment[] @relation("EnrollmentClass")
+  promotedEnrollments StudentEnrollment[] @relation("EnrollmentPromotedToClass")
 
   @@index([schoolId])
 }
@@ -298,8 +310,33 @@ model AcademicSession {
   scores      Score[]
   results     Result[]
   feePayments FeePayment[]
+  studentEnrollments StudentEnrollment[]
 
   @@index([schoolId])
+}
+
+model StudentEnrollment {
+  id                    String           @id @default(uuid()) @db.Uuid
+  schoolId              String           @db.Uuid
+  studentId             String           @db.Uuid
+  academicSessionId     String           @db.Uuid
+  classId               String           @db.Uuid
+  promotedToClassId     String?          @db.Uuid
+  status                EnrollmentStatus @default(Active)
+  startedAt             DateTime         @default(now())
+  endedAt               DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  school                School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student               Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicSession       AcademicSession  @relation(fields: [academicSessionId], references: [id], onDelete: NoAction)
+  class                 Class            @relation("EnrollmentClass", fields: [classId], references: [id], onDelete: NoAction)
+  promotedToClass       Class?           @relation("EnrollmentPromotedToClass", fields: [promotedToClassId], references: [id], onDelete: NoAction)
+
+  @@unique([studentId, academicSessionId])
+  @@index([schoolId, academicSessionId, classId])
+  @@index([studentId])
 }
 
 model Term {

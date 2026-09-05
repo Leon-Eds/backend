@@ -10,63 +10,83 @@ export class ReportService {
   static async getEnrollmentReport(schoolId: string, query: any) {
     const { academicSessionId, classId, gender } = query;
 
-    const where: any = { schoolId };
+    let records: Array<{
+      id: string;
+      fullName: string;
+      admissionNumber: string;
+      gender: "Male" | "Female";
+      className: string;
+      status: string;
+      enrolledAt: Date;
+    }>;
 
-    if (classId) {
-      where.classId = classId;
-    }
-    if (gender) {
-      where.gender = gender;
-    }
-
-    // If an academic session is filtered, we look at students enrolled during that session's date range
     if (academicSessionId) {
       const session = await prisma.academicSession.findFirst({
         where: { id: academicSessionId, schoolId },
       });
-      if (session) {
-        where.enrolledAt = {
-          gte: session.startDate,
-          lte: session.endDate,
-        };
-      }
+      if (!session) return failResponse("Academic session not found.");
+
+      const enrollments = await prisma.studentEnrollment.findMany({
+        where: {
+          schoolId,
+          academicSessionId,
+          ...(classId ? { classId } : {}),
+          ...(gender ? { student: { gender } } : {}),
+        },
+        include: { student: true, class: true },
+        orderBy: { student: { fullName: "asc" } },
+      });
+      records = enrollments.map((enrollment) => ({
+        id: enrollment.student.id,
+        fullName: enrollment.student.fullName,
+        admissionNumber: enrollment.student.admissionNumber,
+        gender: enrollment.student.gender,
+        className: `${enrollment.class.name} ${enrollment.class.arm}`.trim(),
+        status: enrollment.status,
+        enrolledAt: enrollment.startedAt,
+      }));
+    } else {
+      const students = await prisma.student.findMany({
+        where: {
+          schoolId,
+          ...(classId ? { classId } : {}),
+          ...(gender ? { gender } : {}),
+        },
+        include: { class: true },
+        orderBy: { fullName: "asc" },
+      });
+      records = students.map((student) => ({
+        id: student.id,
+        fullName: student.fullName,
+        admissionNumber: student.admissionNumber,
+        gender: student.gender,
+        className: student.class ? `${student.class.name} ${student.class.arm}`.trim() : "Unassigned",
+        status: student.status,
+        enrolledAt: student.enrolledAt,
+      }));
     }
 
-    const students = await prisma.student.findMany({
-      where,
-      include: { class: true },
-      orderBy: { fullName: "asc" },
-    });
-
-    const totalEnrolled = students.length;
-    const maleCount = students.filter((s) => s.gender === "Male").length;
-    const femaleCount = students.filter((s) => s.gender === "Female").length;
+    const totalEnrolled = records.length;
+    const maleCount = records.filter((record) => record.gender === "Male").length;
+    const femaleCount = records.filter((record) => record.gender === "Female").length;
 
     // Group by Class
     const classGroups: { [key: string]: { name: string; count: number; male: number; female: number } } = {};
-    students.forEach((s) => {
-      const className = s.class ? `${s.class.name} ${s.class.arm}`.trim() : "Unassigned";
+    records.forEach((record) => {
+      const className = record.className;
       if (!classGroups[className]) {
         classGroups[className] = { name: className, count: 0, male: 0, female: 0 };
       }
       classGroups[className].count++;
-      if (s.gender === "Male") classGroups[className].male++;
-      if (s.gender === "Female") classGroups[className].female++;
+      if (record.gender === "Male") classGroups[className].male++;
+      if (record.gender === "Female") classGroups[className].female++;
     });
 
     return successResponse({
       totalEnrolled,
       genderBreakdown: { male: maleCount, female: femaleCount },
       classBreakdown: Object.values(classGroups),
-      students: students.map((s) => ({
-        id: s.id,
-        fullName: s.fullName,
-        admissionNumber: s.admissionNumber,
-        gender: s.gender,
-        className: s.class ? `${s.class.name} ${s.class.arm}`.trim() : "Unassigned",
-        status: s.status,
-        enrolledAt: s.enrolledAt,
-      })),
+      students: records,
     }, "Enrollment report generated.");
   }
 
@@ -80,12 +100,15 @@ export class ReportService {
       return failResponse("classId and termId are required parameters for the attendance report.");
     }
 
-    const term = await prisma.term.findUnique({
-      where: { id: termId },
+    const term = await prisma.term.findFirst({
+      where: { id: termId, academicSession: { schoolId } },
     });
 
     if (!term) {
       return failResponse("Term not found.");
+    }
+    if (academicSessionId && academicSessionId !== term.academicSessionId) {
+      return failResponse("The selected term does not belong to the selected academic session.");
     }
 
     // Get number of attendance sessions recorded
@@ -104,12 +127,13 @@ export class ReportService {
     const uniqueDates = new Set(attendances.map((a) => a.date.toDateString()));
     const totalDaysCount = uniqueDates.size;
 
-    const students = await prisma.student.findMany({
-      where: { schoolId, classId, status: "Active" },
-      orderBy: { fullName: "asc" },
+    const enrollments = await prisma.studentEnrollment.findMany({
+      where: { schoolId, academicSessionId: term.academicSessionId, classId },
+      include: { student: true },
+      orderBy: { student: { fullName: "asc" } },
     });
 
-    const studentRecords = students.map((student) => {
+    const studentRecords = enrollments.map(({ student }) => {
       const studentAtt = attendances.filter((a) => a.studentId === student.id);
       const daysPresent = studentAtt.filter((a) => a.status === "Present" || a.status === "Late").length;
       const daysAbsent = studentAtt.filter((a) => a.status === "Absent").length;
@@ -206,31 +230,31 @@ export class ReportService {
       return failResponse("termId is required for the fee payment report.");
     }
 
-    const fees = await prisma.feePayment.findMany({
-      where: { schoolId, termId },
-      include: {
-        student: {
-          include: { class: true },
-        },
-      },
+    const term = await prisma.term.findFirst({
+      where: { id: termId, academicSession: { schoolId } },
     });
+    if (!term) return failResponse("Term not found.");
 
-    const students = await prisma.student.findMany({
-      where: { schoolId, status: "Active" },
-      include: { class: true },
-    });
+    const [fees, enrollments] = await Promise.all([
+      prisma.feePayment.findMany({ where: { schoolId, termId } }),
+      prisma.studentEnrollment.findMany({
+        where: { schoolId, academicSessionId: term.academicSessionId },
+        include: { student: true, class: true },
+        orderBy: { student: { fullName: "asc" } },
+      }),
+    ]);
 
-    const reportData = students.map((student) => {
-      const fee = fees.find((f) => f.studentId === student.id);
+    const reportData = enrollments.map((enrollment) => {
+      const fee = fees.find((payment) => payment.studentId === enrollment.studentId);
       const amountDue = fee ? Number(fee.amountDue) : 0;
       const amountPaid = fee ? Number(fee.amountPaid) : 0;
       const balance = amountDue - amountPaid;
       const status = fee ? fee.status : "NotRecorded";
 
       return {
-        studentName: student.fullName,
-        admissionNumber: student.admissionNumber,
-        className: student.class ? `${student.class.name} ${student.class.arm}`.trim() : "Unassigned",
+        studentName: enrollment.student.fullName,
+        admissionNumber: enrollment.student.admissionNumber,
+        className: `${enrollment.class.name} ${enrollment.class.arm}`.trim(),
         amountDue,
         amountPaid,
         balance,
@@ -304,7 +328,55 @@ export class ReportService {
    * 6. Reports of promoted, graduated and left students
    */
   static async getStudentStatusReport(schoolId: string, query: any) {
-    const { status } = query;
+    const { status, academicSessionId } = query;
+
+    if (academicSessionId || status === "Promoted") {
+      if (academicSessionId) {
+        const sessionExists = await prisma.academicSession.findFirst({
+          where: { id: academicSessionId, schoolId },
+          select: { id: true },
+        });
+        if (!sessionExists) return failResponse("Academic session not found.");
+      }
+
+      const enrollmentWhere: any = {
+        schoolId,
+        ...(academicSessionId ? { academicSessionId } : {}),
+        ...(status ? { status } : {}),
+      };
+      const countWhere = { schoolId, ...(academicSessionId ? { academicSessionId } : {}) };
+      const [enrollments, active, promoted, graduated, left] = await Promise.all([
+        prisma.studentEnrollment.findMany({
+          where: enrollmentWhere,
+          include: { student: true, class: true, promotedToClass: true, academicSession: true },
+          orderBy: { student: { fullName: "asc" } },
+        }),
+        prisma.studentEnrollment.count({ where: { ...countWhere, status: "Active" } }),
+        prisma.studentEnrollment.count({ where: { ...countWhere, status: "Promoted" } }),
+        prisma.studentEnrollment.count({ where: { ...countWhere, status: "Graduated" } }),
+        prisma.studentEnrollment.count({ where: { ...countWhere, status: "Left" } }),
+      ]);
+
+      return successResponse({
+        counts: { Active: active, Promoted: promoted, Graduated: graduated, Left: left },
+        students: enrollments.map((enrollment) => ({
+          studentId: enrollment.studentId,
+          fullName: enrollment.student.fullName,
+          admissionNumber: enrollment.student.admissionNumber,
+          academicSessionId: enrollment.academicSessionId,
+          academicSessionName: enrollment.academicSession.name,
+          classId: enrollment.classId,
+          className: `${enrollment.class.name} ${enrollment.class.arm}`.trim(),
+          promotedToClassId: enrollment.promotedToClassId,
+          promotedToClassName: enrollment.promotedToClass
+            ? `${enrollment.promotedToClass.name} ${enrollment.promotedToClass.arm}`.trim()
+            : null,
+          status: enrollment.status,
+          enrolledAt: enrollment.startedAt,
+          endedAt: enrollment.endedAt,
+        })),
+      }, "Student status report generated.");
+    }
 
     const where: any = { schoolId };
     if (status) {
@@ -319,11 +391,13 @@ export class ReportService {
       orderBy: { fullName: "asc" },
     });
 
-    const counts = {
-      Active: await prisma.student.count({ where: { schoolId, status: "Active" } }),
-      Graduated: await prisma.student.count({ where: { schoolId, status: "Graduated" } }),
-      Left: await prisma.student.count({ where: { schoolId, status: "Left" } }),
-    };
+    const [active, promoted, graduated, left] = await Promise.all([
+      prisma.student.count({ where: { schoolId, status: "Active" } }),
+      prisma.studentEnrollment.count({ where: { schoolId, status: "Promoted" } }),
+      prisma.student.count({ where: { schoolId, status: "Graduated" } }),
+      prisma.student.count({ where: { schoolId, status: "Left" } }),
+    ]);
+    const counts = { Active: active, Promoted: promoted, Graduated: graduated, Left: left };
 
     return successResponse({
       counts,
@@ -391,29 +465,44 @@ export class ReportService {
       return failResponse("termId query parameter is required.");
     }
 
+    const term = await prisma.term.findFirst({
+      where: { id: termId, academicSession: { schoolId } },
+    });
+    if (!term) return failResponse("Term not found.");
+
     const fees = await prisma.feePayment.findMany({
       where: {
         schoolId,
         termId,
         status: { not: "Cleared" },
       },
-      include: {
-        student: {
-          include: { class: true },
-        },
-      },
+      include: { student: true },
     });
+    const enrollments = await prisma.studentEnrollment.findMany({
+      where: {
+        schoolId,
+        academicSessionId: term.academicSessionId,
+        studentId: { in: fees.map((fee) => fee.studentId) },
+      },
+      include: { class: true },
+    });
+    const enrollmentByStudentId = new Map(
+      enrollments.map((enrollment) => [enrollment.studentId, enrollment])
+    );
 
     const debtors = fees.map((f) => {
       const amountDue = Number(f.amountDue);
       const amountPaid = Number(f.amountPaid);
       const balance = amountDue - amountPaid;
 
+      const enrollment = enrollmentByStudentId.get(f.studentId);
       return {
         studentId: f.studentId,
         studentName: f.student.fullName,
         admissionNumber: f.student.admissionNumber,
-        className: f.student.class ? `${f.student.class.name} ${f.student.class.arm}`.trim() : "Unassigned",
+        className: enrollment
+          ? `${enrollment.class.name} ${enrollment.class.arm}`.trim()
+          : "Unassigned",
         amountDue,
         amountPaid,
         balance,

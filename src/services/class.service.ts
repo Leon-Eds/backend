@@ -104,6 +104,14 @@ export class ClassService {
   }
 
   static async createClass(schoolId: string, request: any) {
+    if (request.academicSessionId) {
+      const session = await prisma.academicSession.findFirst({
+        where: { id: request.academicSessionId, schoolId },
+        select: { id: true },
+      });
+      if (!session) return failResponse("Academic session not found in this school.");
+    }
+
     const classEntity = await prisma.class.create({
       data: {
         schoolId,
@@ -150,11 +158,30 @@ export class ClassService {
       return failResponse("Class not found.");
     }
 
+    if (
+      request.academicSessionId !== undefined &&
+      classEntity.academicSessionId &&
+      request.academicSessionId !== classEntity.academicSessionId
+    ) {
+      return failResponse(
+        "A class already assigned to an academic session cannot be moved. Create a new class for the new session."
+      );
+    }
+    if (request.academicSessionId && !classEntity.academicSessionId) {
+      const session = await prisma.academicSession.findFirst({
+        where: { id: request.academicSessionId, schoolId },
+        select: { id: true },
+      });
+      if (!session) return failResponse("Academic session not found in this school.");
+    }
+
     const updated = await prisma.class.update({
       where: { id: classId },
       data: {
         name: request.name !== undefined ? request.name : undefined,
         arm: request.arm !== undefined ? request.arm : undefined,
+        academicSessionId:
+          request.academicSessionId !== undefined ? request.academicSessionId : undefined,
         formTeacherId: request.formTeacherId !== undefined ? request.formTeacherId : undefined,
       },
       include: {
@@ -168,6 +195,26 @@ export class ClassService {
         formTeacher: true,
       },
     });
+
+    if (request.academicSessionId && !classEntity.academicSessionId) {
+      const activeStudents = await prisma.student.findMany({
+        where: { schoolId, classId, status: "Active" },
+        select: { id: true, enrolledAt: true },
+      });
+      if (activeStudents.length > 0) {
+        await prisma.studentEnrollment.createMany({
+          data: activeStudents.map((student) => ({
+            schoolId,
+            studentId: student.id,
+            academicSessionId: request.academicSessionId,
+            classId,
+            status: "Active",
+            startedAt: student.enrolledAt,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     return successResponse(this.mapToResponse(updated), "Class updated successfully.");
   }
@@ -186,6 +233,15 @@ export class ClassService {
 
     if (classEntity.students.length > 0) {
       return failResponse("Cannot delete a class with students. Reassign them first.");
+    }
+
+    const enrollmentCount = await prisma.studentEnrollment.count({
+      where: {
+        OR: [{ classId }, { promotedToClassId: classId }],
+      },
+    });
+    if (enrollmentCount > 0) {
+      return failResponse("Cannot delete a class that is referenced by student enrollment history.");
     }
 
     await prisma.class.delete({

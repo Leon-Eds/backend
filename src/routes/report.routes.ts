@@ -5,9 +5,6 @@ import { requireSchoolId } from "../middlewares/tenant.middleware";
 
 const router = Router();
 
-router.use(authMiddleware(["SchoolAdmin", "Bursar", "Teacher"]));
-router.use(requireSchoolId);
-
 /**
  * @swagger
  * tags:
@@ -52,7 +49,7 @@ router.use(requireSchoolId);
  *       200:
  *         description: Enrollment report retrieved successfully
  */
-router.get("/enrollment", ReportController.getEnrollmentReport);
+router.get("/enrollment", authMiddleware(["SchoolAdmin"]), requireSchoolId, ReportController.getEnrollmentReport);
 
 /**
  * @swagger
@@ -84,7 +81,7 @@ router.get("/enrollment", ReportController.getEnrollmentReport);
  *       200:
  *         description: Attendance report retrieved successfully
  */
-router.get("/attendance", ReportController.getAttendanceReport);
+router.get("/attendance", authMiddleware(["SchoolAdmin"]), requireSchoolId, ReportController.getAttendanceReport);
 
 /**
  * @swagger
@@ -121,7 +118,7 @@ router.get("/attendance", ReportController.getAttendanceReport);
  *       200:
  *         description: Performance report retrieved successfully
  */
-router.get("/performance", ReportController.getAcademicPerformanceReport);
+router.get("/performance", authMiddleware(["SchoolAdmin"]), requireSchoolId, ReportController.getAcademicPerformanceReport);
 
 /**
  * @swagger
@@ -147,7 +144,7 @@ router.get("/performance", ReportController.getAcademicPerformanceReport);
  *       200:
  *         description: Fee payment report retrieved successfully
  */
-router.get("/feepayment", ReportController.getFeePaymentReport);
+router.get("/feepayment", authMiddleware(["SchoolAdmin", "Bursar"]), requireSchoolId, ReportController.getFeePaymentReport);
 
 /**
  * @swagger
@@ -181,7 +178,7 @@ router.get("/feepayment", ReportController.getFeePaymentReport);
  *       200:
  *         description: Revenue report retrieved successfully
  */
-router.get("/revenue", ReportController.getRevenueReport);
+router.get("/revenue", authMiddleware(["SchoolAdmin", "Bursar"]), requireSchoolId, ReportController.getRevenueReport);
 
 /**
  * @swagger
@@ -196,7 +193,13 @@ router.get("/revenue", ReportController.getRevenueReport);
  *         name: status
  *         schema:
  *           type: string
- *           enum: [Active, Graduated, Left]
+ *           enum: [Active, Promoted, Graduated, Left]
+ *       - in: query
+ *         name: academicSessionId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Read statuses from the historical enrollment ledger for this session
  *       - in: header
  *         name: School-Id
  *         required: true
@@ -206,7 +209,7 @@ router.get("/revenue", ReportController.getRevenueReport);
  *       200:
  *         description: Student status report retrieved successfully
  */
-router.get("/studentstatus", ReportController.getStudentStatusReport);
+router.get("/studentstatus", authMiddleware(["SchoolAdmin"]), requireSchoolId, ReportController.getStudentStatusReport);
 
 /**
  * @swagger
@@ -226,7 +229,7 @@ router.get("/studentstatus", ReportController.getStudentStatusReport);
  *       200:
  *         description: Staff report retrieved successfully
  */
-router.get("/staff", ReportController.getStaffReport);
+router.get("/staff", authMiddleware(["SchoolAdmin"]), requireSchoolId, ReportController.getStaffReport);
 
 /**
  * @swagger
@@ -252,7 +255,7 @@ router.get("/staff", ReportController.getStaffReport);
  *       200:
  *         description: Outstanding fees report retrieved successfully
  */
-router.get("/outstandingfees", ReportController.getOutstandingFeesReport);
+router.get("/outstandingfees", authMiddleware(["SchoolAdmin", "Bursar"]), requireSchoolId, ReportController.getOutstandingFeesReport);
 
 /**
  * @swagger
@@ -312,6 +315,6 @@ router.get("/outstandingfees", ReportController.getOutstandingFeesReport);
  *       200:
  *         description: Exported report file
  */
-router.get("/export", ReportController.exportReport);
+router.get("/export", authMiddleware(["SchoolAdmin", "Bursar"]), requireSchoolId, ReportController.exportReport);
 
 export default router;

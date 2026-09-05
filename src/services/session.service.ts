@@ -210,10 +210,13 @@ export class AcademicSessionService {
     const feeCount = await prisma.feePayment.count({
       where: { academicSessionId: sessionId },
     });
+    const enrollmentCount = await prisma.studentEnrollment.count({
+      where: { academicSessionId: sessionId },
+    });
 
-    if (scoreCount > 0 || resultCount > 0 || feeCount > 0) {
+    if (scoreCount > 0 || resultCount > 0 || feeCount > 0 || enrollmentCount > 0) {
       return failResponse(
-        "Cannot delete academic session because it is referenced by existing scores, results, or fee payments."
+        "Cannot delete academic session because it contains historical student or academic records."
       );
     }
 

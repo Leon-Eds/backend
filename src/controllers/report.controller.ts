@@ -94,6 +94,11 @@ export class ReportController {
         return res.status(400).json({ success: false, message: "Query parameter 'type' is required." });
       }
 
+      const financeReportTypes = new Set(["feepayment", "revenue", "outstandingfees"]);
+      if (req.user?.role === "Bursar" && !financeReportTypes.has(reportType)) {
+        return res.status(403).json({ success: false, message: "You do not have permission to export this report." });
+      }
+
       let reportResult: any;
       switch (reportType) {
         case "enrollment":

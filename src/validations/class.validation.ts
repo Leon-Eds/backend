@@ -10,6 +10,7 @@ export const createClassSchema = z.object({
 export const updateClassSchema = z.object({
   name: z.string().max(100).optional(),
   arm: z.string().max(10).optional(),
+  academicSessionId: z.string().uuid().optional(),
   formTeacherId: z.string().uuid().optional().nullable(),
 });
 

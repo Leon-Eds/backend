@@ -3,6 +3,13 @@ import crypto from "crypto";
 import { AuthenticatedRequest } from "../types";
 import { PaymentService } from "../services/payment.service";
 
+function constantTimeMatch(expected: string, provided: unknown): boolean {
+  if (typeof provided !== "string") return false;
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  const providedBuffer = Buffer.from(provided, "utf8");
+  return expectedBuffer.length === providedBuffer.length && crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+}
+
 export class PaymentController {
   /**
    * Subscribe school to a plan
@@ -60,22 +67,18 @@ export class PaymentController {
       const paystackSignature = req.headers["x-paystack-signature"] as string;
       const secret = process.env.PAYSTACK_SECRET_KEY;
 
-      // Validate signature if secret key is present in environment
-      if (secret && paystackSignature) {
-        const hash = crypto
-          .createHmac("sha512", secret)
-          .update(JSON.stringify(req.body))
-          .digest("hex");
+      if (!secret) {
+        console.error("[PaymentController] PAYSTACK_SECRET_KEY is not configured.");
+        return res.status(503).json({ success: false, message: "Payment webhook is unavailable." });
+      }
+      if (!paystackSignature || !req.rawBody) {
+        return res.status(401).json({ success: false, message: "Missing Paystack signature or raw payload." });
+      }
 
-        if (hash !== paystackSignature) {
-          console.warn("[PaymentController] Signature validation failed.");
-          return res.status(401).json({ success: false, message: "Invalid signature" });
-        }
-      } else if (secret && !paystackSignature) {
-        console.warn("[PaymentController] Missing x-paystack-signature header.");
-        return res.status(401).json({ success: false, message: "Missing Paystack signature" });
-      } else {
-        console.warn("[PaymentController] Signature verification skipped (PAYSTACK_SECRET_KEY not set).");
+      const hash = crypto.createHmac("sha512", secret).update(req.rawBody).digest("hex");
+      if (!constantTimeMatch(hash, paystackSignature)) {
+        console.warn("[PaymentController] Signature validation failed.");
+        return res.status(401).json({ success: false, message: "Invalid signature" });
       }
 
       const { event, data } = req.body;
@@ -83,12 +86,7 @@ export class PaymentController {
         return res.status(400).json({ success: false, message: "Invalid payload body." });
       }
 
-      // Process webhook asynchronously
-      PaymentService.handleWebhook(event, data).catch((err) => {
-        console.error("[PaymentController] Error processing webhook event:", err);
-      });
-
-      // Acknowledge receipt to Paystack immediately with 200 OK
+      await PaymentService.handleWebhook(event, data);
       return res.status(200).json({ success: true, message: "Webhook received" });
     } catch (error) {
       next(error);
@@ -127,11 +125,14 @@ export class PaymentController {
    */
   static async cron(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      // Secure cron with simple token check if environment key is defined
       const cronSecret = process.env.CRON_SECRET;
-      const clientSecret = req.headers["x-cron-secret"] || req.query.secret;
+      const clientSecret = req.headers["x-cron-secret"];
 
-      if (cronSecret && clientSecret !== cronSecret) {
+      if (!cronSecret) {
+        console.error("[PaymentController] CRON_SECRET is not configured.");
+        return res.status(503).json({ success: false, message: "Scheduled task is unavailable." });
+      }
+      if (!constantTimeMatch(cronSecret, clientSecret)) {
         return res.status(403).json({ success: false, message: "Forbidden - Invalid cron secret" });
       }
 

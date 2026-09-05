@@ -124,8 +124,8 @@ router.post("/schools/:id/upgrade-manual", authMiddleware(["SuperAdmin"]), Payme
  *     summary: Cron trigger to process expired/approaching subscriptions
  *     tags: [Payments]
  *     parameters:
- *       - in: query
- *         name: secret
+ *       - in: header
+ *         name: x-cron-secret
  *         schema:
  *           type: string
  *     responses:
@@ -135,6 +135,5 @@ router.post("/schools/:id/upgrade-manual", authMiddleware(["SuperAdmin"]), Payme
  *         description: Forbidden - invalid secret
  */
 router.post("/cron", PaymentController.cron);
-router.get("/cron", PaymentController.cron); // Also support GET for ease of triggering
 
 export default router;

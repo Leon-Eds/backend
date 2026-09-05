@@ -1,12 +1,14 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import path from "path";
 import http from "http";
 import { Server } from "socket.io";
 import { NotificationService } from "./services/notification.service";
+import { validateRuntimeConfiguration } from "./config/env";
+import { resolveAuthenticatedUser } from "./middlewares/auth.middleware";
 
 // Import Middlewares
 import { errorMiddleware } from "./middlewares/error.middleware";
@@ -36,14 +38,21 @@ import promotionRoutes from "./routes/promotion.routes";
 import reportRoutes from "./routes/report.routes";
 import schemeOfWorkRoutes from "./routes/scheme-of-work.routes";
 
-dotenv.config();
+validateRuntimeConfiguration();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Base Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buffer) => {
+    const expressRequest = req as express.Request;
+    if (expressRequest.originalUrl.startsWith("/api/payment/webhook")) {
+      expressRequest.rawBody = Buffer.from(buffer);
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Swagger Setup
@@ -180,19 +189,29 @@ const io = new Server(server, {
   }
 });
 
+io.use(async (socket, next) => {
+  try {
+    const authorization = socket.handshake.headers.authorization;
+    const suppliedToken = socket.handshake.auth?.token;
+    const token = typeof suppliedToken === "string"
+      ? suppliedToken.replace(/^Bearer\s+/i, "")
+      : typeof authorization === "string"
+        ? authorization.replace(/^Bearer\s+/i, "")
+        : "";
+
+    if (!token) return next(new Error("Authentication token is missing."));
+    socket.data.user = await resolveAuthenticatedUser(token);
+    return next();
+  } catch {
+    return next(new Error("Invalid or expired authentication token."));
+  }
+});
+
 io.on("connection", (socket) => {
   console.log(`Socket client connected: ${socket.id}`);
-
-  socket.on("register", ({ userId, schoolId }) => {
-    if (userId) {
-      socket.join(`user:${userId}`);
-      console.log(`Socket ${socket.id} joined user:${userId} room.`);
-    }
-    if (schoolId) {
-      socket.join(`school:${schoolId}`);
-      console.log(`Socket ${socket.id} joined school:${schoolId} room.`);
-    }
-  });
+  const user = socket.data.user;
+  socket.join(`user:${user.id}`);
+  if (user.schoolId) socket.join(`school:${user.schoolId}`);
 
   socket.on("disconnect", () => {
     console.log(`Socket client disconnected: ${socket.id}`);

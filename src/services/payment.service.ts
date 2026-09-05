@@ -136,7 +136,20 @@ export class PaymentService {
 
       if (!plan) {
         console.error(`[PaymentService] Plan not found for plan code: ${planCode}`);
-        return;
+        throw new Error("Webhook payment plan could not be resolved.");
+      }
+
+      const normalizedCustomerEmail = String(customerEmail || "").trim().toLowerCase();
+      const expectedAmount = Math.round(Number(plan.amount) * 100);
+      const receivedAmount = Number(data.amount);
+      if (!normalizedCustomerEmail || normalizedCustomerEmail !== school.contactEmail.toLowerCase()) {
+        throw new Error("Webhook customer does not match the school checkout identity.");
+      }
+      if (planCode && plan.paystackPlanCode !== planCode) {
+        throw new Error("Webhook plan code does not match the selected payment plan.");
+      }
+      if (!Number.isFinite(receivedAmount) || receivedAmount !== expectedAmount) {
+        throw new Error("Webhook amount does not match the selected payment plan.");
       }
 
       // Calculate next payment date

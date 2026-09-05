@@ -24,7 +24,8 @@ router.use(requireSchoolId);
  *   post:
  *     summary: Bulk promote students from source classes to target classes
  *     description: >
- *       Moves all active students from each source class to the specified target class.
+ *       Atomically moves active students from old-session source classes to current-session
+ *       target classes. The previous class/session enrollment is retained as history.
  *       The SchoolAdmin provides an array of class mappings.
  *     tags: [Promotion]
  *     security:
@@ -120,5 +121,31 @@ router.post("/graduate", validateBody(graduateClassSchema), PromotionController.
  *         description: Student marked as Left
  */
 router.put("/mark-left/:studentId", PromotionController.markLeft);
+
+/**
+ * @swagger
+ * /api/promotion/student/{studentId}/history:
+ *   get:
+ *     summary: Get a student's class and promotion history across academic sessions
+ *     tags: [Promotion]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: header
+ *         name: School-Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Student enrollment history retrieved
+ */
+router.get("/student/:studentId/history", PromotionController.getStudentHistory);
 
 export default router;

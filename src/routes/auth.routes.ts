@@ -232,7 +232,7 @@ router.post("/logout", authMiddleware(), AuthController.logout);
  *                 format: email
  *     responses:
  *       200:
- *         description: Password reset token generated (in production, sent via email)
+ *         description: Generic acknowledgement; the reset token is sent only by email
  *       400:
  *         description: Bad request
  */

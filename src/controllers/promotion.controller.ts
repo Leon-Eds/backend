@@ -34,4 +34,16 @@ export class PromotionController {
       next(error);
     }
   }
+
+  static async getStudentHistory(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await PromotionService.getStudentEnrollmentHistory(
+        req.schoolId!,
+        req.params.studentId
+      );
+      return res.status(result.success ? 200 : 404).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
