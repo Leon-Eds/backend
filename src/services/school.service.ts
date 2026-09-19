@@ -35,6 +35,7 @@ export class SchoolService {
       website: school.website || "",
       principalName: school.principalName || "",
       principalSignatureUrl: school.principalSignatureUrl || "",
+      schoolStampUrl: school.schoolStampUrl || "",
     };
   }
 
@@ -121,6 +122,7 @@ export class SchoolService {
         website: request.website !== undefined ? request.website : undefined,
         principalName: request.principalName !== undefined ? request.principalName : undefined,
         principalSignatureUrl: request.principalSignatureUrl !== undefined ? request.principalSignatureUrl : undefined,
+        schoolStampUrl: request.schoolStampUrl !== undefined ? request.schoolStampUrl : undefined,
       },
       include: {
         teachers: { select: { isActive: true } },

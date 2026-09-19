@@ -126,6 +126,7 @@ model School {
   website                  String?      @default("") @db.VarChar(250)
   principalName            String?      @default("") @db.VarChar(200)
   principalSignatureUrl    String?      @default("") @db.VarChar(500)
+  schoolStampUrl           String?      @default("") @db.VarChar(500)
 
   plan             PaymentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 

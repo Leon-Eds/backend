@@ -135,6 +135,9 @@ router.get("/:id", authMiddleware(), SchoolController.getById);
  *               principalSignatureUrl:
  *                 type: string
  *                 example: "https://example.com/signatures/principal.png"
+ *               schoolStampUrl:
+ *                 type: string
+ *                 example: "https://example.com/school/stamp.png"
  *               schoolType:
  *                 type: string
  *                 example: "Secondary"

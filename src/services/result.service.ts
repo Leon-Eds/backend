@@ -645,6 +645,7 @@ export class ResultService {
       website: school?.website || "",
       principalName: school?.principalName || "",
       principalSignatureUrl: school?.principalSignatureUrl || "",
+      schoolStampUrl: school?.schoolStampUrl || "",
     };
 
     const formTeacherInfo = {
@@ -678,6 +679,7 @@ export class ResultService {
       schoolInfo,
       principalName: schoolInfo.principalName,
       principalSignatureUrl: schoolInfo.principalSignatureUrl,
+      schoolStampUrl: schoolInfo.schoolStampUrl,
 
       // Teacher Signature Metadata
       formTeacherInfo,
@@ -692,6 +694,7 @@ export class ResultService {
         formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
         principalName: schoolInfo.principalName,
         principalSignatureUrl: schoolInfo.principalSignatureUrl,
+        schoolStampUrl: schoolInfo.schoolStampUrl,
       },
 
       // 1. Student Profile Extensions

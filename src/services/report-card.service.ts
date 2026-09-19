@@ -73,6 +73,7 @@ export class ReportCardService {
       schoolEmail: school.contactEmail,
       schoolPhone: school.contactPhone,
       schoolLogoUrl: school.logoUrl,
+      schoolStampUrl: school.schoolStampUrl || "",
       studentName: result.student.fullName,
       admissionNumber: result.student.admissionNumber,
       className: result.class ? `${result.class.name} ${result.class.arm}`.trim() : "",
@@ -95,6 +96,7 @@ export class ReportCardService {
         formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
         principalName: school.principalName || "",
         principalSignatureUrl: school.principalSignatureUrl || "",
+        schoolStampUrl: school.schoolStampUrl || "",
       },
       subjectCount: result.subjectCount,
       teacherComment: result.teacherComment,
@@ -207,6 +209,7 @@ export class ReportCardService {
       teacherName: data.formTeacherName || "Form Teacher",
       principalSignature: data.resultMetadata?.principalSignatureUrl,
       principalName: data.resultMetadata?.principalName || "Principal",
+      schoolStamp: data.schoolStampUrl || data.resultMetadata?.schoolStampUrl,
       promotedTo: data.className,
     };
 
