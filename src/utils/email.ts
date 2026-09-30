@@ -1,39 +1,40 @@
 import { Resend } from "resend";
 import { emailTemplates } from "./email-templates";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const fromEmail = process.env.FROM_EMAIL || "LeonEd Africa <onboarding@resend.dev>";
-
-// Only initialize Resend if a non-placeholder API key is set
 let resend: Resend | null = null;
-if (resendApiKey && resendApiKey !== "re_dev_placeholderkey" && resendApiKey.trim() !== "") {
-  resend = new Resend(resendApiKey);
+
+function getEmailClient() {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const fromEmail = process.env.FROM_EMAIL?.trim();
+
+  if (!apiKey || apiKey === "re_dev_placeholderkey") {
+    throw new Error("RESEND_API_KEY is not configured.");
+  }
+  if (!fromEmail) {
+    throw new Error("FROM_EMAIL is not configured. Use an address on your verified Resend domain.");
+  }
+
+  if (!resend) {
+    resend = new Resend(apiKey);
+  }
+
+  return { resend, fromEmail };
 }
 
 async function sendMail(to: string, subject: string, html: string) {
-  console.log(`[Email Service] Triggered email send to: ${to} | Subject: "${subject}"`);
-
-  if (!resend) {
-    console.log(`[Email Service] Resend is unconfigured or using placeholder key. Logging email preview below:`);
-    console.log(`--------------------------------------------------------------------------------`);
-    console.log(`FROM: ${fromEmail}`);
-    console.log(`TO: ${to}`);
-    console.log(`SUBJECT: ${subject}`);
-    console.log(`--------------------------------------------------------------------------------`);
-    return { success: true, simulated: true };
-  }
+  const client = getEmailClient();
 
   try {
-    const response = await resend.emails.send({
-      from: fromEmail,
+    const response = await client.resend.emails.send({
+      from: client.fromEmail,
       to,
       subject,
       html,
     });
-    console.log(`[Email Service] Resend API Response:`, response);
     if (response.error) {
       throw new Error(response.error.message || JSON.stringify(response.error));
     }
+    console.log(`[Email Service] Email sent successfully. Message ID: ${response.data?.id || "unknown"}`);
     return { success: true, data: response.data };
   } catch (error) {
     console.error(`[Email Service] Failed to send email via Resend API:`, error);

@@ -39,8 +39,8 @@ export class BursarService {
       },
     });
 
-    // Send welcome email asynchronously
-    emailService.sendBursarWelcomeEmail(
+    // Wait for the delivery attempt so serverless runtimes do not terminate it early.
+    await emailService.sendBursarWelcomeEmail(
       user.email,
       user.name,
       school.name,

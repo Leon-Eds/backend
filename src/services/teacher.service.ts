@@ -153,8 +153,8 @@ export class TeacherService {
       });
     });
 
-    // Send teacher onboarding email asynchronously
-    emailService.sendTeacherWelcomeEmail(
+    // Wait for the delivery attempt so serverless runtimes do not terminate it early.
+    await emailService.sendTeacherWelcomeEmail(
       teacher.email,
       teacher.fullName,
       school.name,

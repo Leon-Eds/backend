@@ -322,11 +322,11 @@ export class StudentService {
       return { student, parent };
     });
 
-    // Send student/parent onboarding email asynchronously
+    // Wait for the delivery attempt so serverless runtimes do not terminate it early.
     const parentEmail = parent?.email || "";
     const parentName = parent?.fullName || "";
     if (parentEmail && parentEmail.trim() !== "") {
-      emailService.sendStudentWelcomeEmail(
+      await emailService.sendStudentWelcomeEmail(
         parentEmail,
         parentName,
         student.fullName,

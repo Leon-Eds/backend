@@ -78,7 +78,7 @@ export class AuthService {
     });
 
     // Send welcome email immediately
-    emailService.sendSuperAdminWelcomeEmail(user.email, user.name)
+    await emailService.sendSuperAdminWelcomeEmail(user.email, user.name)
       .catch((err) => console.error("[AuthService] Super admin welcome email error:", err));
 
     return successResponse(responseData, "Super Admin created successfully.");
@@ -163,7 +163,7 @@ export class AuthService {
       return { school, user, responseData };
     });
 
-    emailService.sendSchoolWelcomeEmail(
+    await emailService.sendSchoolWelcomeEmail(
       user.email,
       user.name,
       school.name,
@@ -326,9 +326,8 @@ export class AuthService {
       },
     });
 
-    // Send reset password email asynchronously
-    emailService.sendPasswordResetEmail(user.email, user.name, resetToken)
-      .catch((err) => console.error("[AuthService] Password reset email error:", err));
+    // Password recovery is incomplete unless the email is delivered.
+    await emailService.sendPasswordResetEmail(user.email, user.name, resetToken);
 
     return successResponse(true, "If an account with that email exists, a password reset link has been sent.");
   }
@@ -396,7 +395,7 @@ export class AuthService {
 
     // Send corresponding welcome email upon verification
     if (updatedUser.role === "SchoolAdmin" && user.school) {
-      emailService.sendSchoolWelcomeEmail(
+      await emailService.sendSchoolWelcomeEmail(
         updatedUser.email,
         updatedUser.name,
         user.school.name,
@@ -404,7 +403,7 @@ export class AuthService {
         user.school.plan?.name || "Free"
       ).catch((err) => console.error("[AuthService] Welcome email error:", err));
     } else if (updatedUser.role === "SuperAdmin") {
-      emailService.sendSuperAdminWelcomeEmail(updatedUser.email, updatedUser.name)
+      await emailService.sendSuperAdminWelcomeEmail(updatedUser.email, updatedUser.name)
         .catch((err) => console.error("[AuthService] Super admin welcome email error:", err));
     }
 
@@ -445,8 +444,7 @@ export class AuthService {
       },
     });
 
-    emailService.sendVerificationOtpEmail(user.email, user.name, otp)
-      .catch((err) => console.error("[AuthService] Resend OTP email error:", err));
+    await emailService.sendVerificationOtpEmail(user.email, user.name, otp);
 
     return successResponse(true, "A new verification OTP has been sent to your email.");
   }

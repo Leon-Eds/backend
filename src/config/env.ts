@@ -1,5 +1,12 @@
 const REQUIRED_BASE_ENV = ["JWT_KEY", "JWT_ISSUER", "JWT_AUDIENCE"] as const;
-const REQUIRED_PRODUCTION_ENV = ["PAYSTACK_SECRET_KEY", "CRON_SECRET", "SUPER_ADMIN_SECRET", "CORS_ORIGINS"] as const;
+const REQUIRED_PRODUCTION_ENV = [
+  "PAYSTACK_SECRET_KEY",
+  "CRON_SECRET",
+  "SUPER_ADMIN_SECRET",
+  "CORS_ORIGINS",
+  "RESEND_API_KEY",
+  "FROM_EMAIL",
+] as const;
 
 function missingVariables(names: readonly string[]): string[] {
   return names.filter((name) => !process.env[name]?.trim());

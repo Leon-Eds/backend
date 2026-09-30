@@ -138,7 +138,7 @@ export class ClassService {
     });
 
     if (school && school.contactEmail) {
-      emailService.sendClassCreatedNotification(
+      await emailService.sendClassCreatedNotification(
         school.contactEmail,
         school.name,
         classEntity.name,

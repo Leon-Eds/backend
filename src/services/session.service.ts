@@ -63,7 +63,7 @@ export class AcademicSessionService {
     });
 
     if (school && school.contactEmail) {
-      emailService.sendSessionCreatedNotification(
+      await emailService.sendSessionCreatedNotification(
         school.contactEmail,
         school.name,
         session.name,
