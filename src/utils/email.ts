@@ -54,8 +54,8 @@ export const emailService = {
   /**
    * Send Password Reset Email with Token/Link
    */
-  async sendPasswordResetEmail(to: string, name: string, token: string) {
-    const { subject, html } = emailTemplates.getPasswordReset(name, token);
+  async sendPasswordResetEmail(to: string, name: string, token: string, frontendUrl: string) {
+    const { subject, html } = emailTemplates.getPasswordReset(name, token, frontendUrl);
     return sendMail(to, subject, html);
   },
 

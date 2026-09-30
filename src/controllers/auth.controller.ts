@@ -83,7 +83,8 @@ export class AuthController {
 
   static async forgotPassword(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const result = await AuthService.forgotPassword(req.body);
+      const requestOrigin = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
+      const result = await AuthService.forgotPassword(req.body, requestOrigin);
       return res.status(200).json(result);
     } catch (error) {
       next(error);

@@ -242,9 +242,9 @@ export const emailTemplates = {
   /**
    * 2. Password Reset Request Email
    */
-  getPasswordReset(name: string, resetToken: string): { subject: string; html: string } {
+  getPasswordReset(name: string, resetToken: string, frontendUrl: string): { subject: string; html: string } {
     const subject = "Reset Your LeonEd Africa Password";
-    const resetUrl = `https://leoned.app/reset-password?token=${resetToken}`;
+    const resetUrl = `${frontendUrl.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(resetToken)}`;
     const html = wrapInShell(
       subject,
       `Password Reset Request 🔑`,
@@ -254,7 +254,7 @@ export const emailTemplates = {
       <p>We received a request to reset the password associated with your LeonEd Africa account.</p>
       
       <div class="alert-box-warning">
-        ⚠ This password reset link will expire in <strong>1 hour</strong>.
+        ⚠ This password reset link will expire in <strong>15 minutes</strong>.
       </div>
 
       <div style="text-align: center;">
@@ -733,4 +733,3 @@ export const emailTemplates = {
     return { subject, html };
   }
 };
-

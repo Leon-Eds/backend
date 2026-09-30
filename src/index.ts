@@ -10,6 +10,7 @@ import { NotificationService } from "./services/notification.service";
 import { validateRuntimeConfiguration } from "./config/env";
 import { resolveAuthenticatedUser } from "./middlewares/auth.middleware";
 import { securityHeaders } from "./middlewares/security.middleware";
+import { getAllowedOrigins } from "./utils/frontend-url";
 
 // Import Middlewares
 import { errorMiddleware } from "./middlewares/error.middleware";
@@ -43,10 +44,7 @@ validateRuntimeConfiguration();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = getAllowedOrigins();
 
 // Base Middlewares
 app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || "1"));

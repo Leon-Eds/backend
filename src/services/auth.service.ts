@@ -5,6 +5,7 @@ import { generateSlug } from "../utils/slug";
 import { successResponse, failResponse } from "../utils/response";
 import crypto from "crypto";
 import { emailService } from "../utils/email";
+import { resolveFrontendUrl } from "../utils/frontend-url";
 
 export class AuthService {
   private static generateAuthResponseData(user: any, schoolName?: string | null, schoolLogoUrl?: string | null) {
@@ -304,7 +305,7 @@ export class AuthService {
     return successResponse(true, "Logged out successfully.");
   }
 
-  static async forgotPassword(request: any) {
+  static async forgotPassword(request: any, requestOrigin?: string) {
     const user = await prisma.user.findFirst({
       where: { email: request.email.toLowerCase() },
     });
@@ -327,7 +328,8 @@ export class AuthService {
     });
 
     // Password recovery is incomplete unless the email is delivered.
-    await emailService.sendPasswordResetEmail(user.email, user.name, resetToken);
+    const frontendUrl = resolveFrontendUrl(requestOrigin);
+    await emailService.sendPasswordResetEmail(user.email, user.name, resetToken, frontendUrl);
 
     return successResponse(true, "If an account with that email exists, a password reset link has been sent.");
   }

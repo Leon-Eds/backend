@@ -1,6 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { emailService } from "../utils/email";
+import { emailTemplates } from "../utils/email-templates";
+
+test("password reset email uses the configured frontend URL", () => {
+  const { html } = emailTemplates.getPasswordReset(
+    "Test User",
+    "fixture-token",
+    "https://www.leoned.ng/"
+  );
+
+  assert.match(html, /https:\/\/www\.leoned\.ng\/reset-password\?token=fixture-token/);
+  assert.doesNotMatch(html, /https:\/\/leoned\.app\/reset-password/);
+});
 
 test("email delivery fails explicitly when unconfigured and uses Resend when configured", async () => {
   const originalApiKey = process.env.RESEND_API_KEY;
