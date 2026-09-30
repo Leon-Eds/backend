@@ -86,8 +86,9 @@ export class AuthService {
   }
 
   static async registerSchool(request: any) {
+    const email = request.email.toLowerCase().trim();
     const existingEmail = await prisma.user.findFirst({
-      where: { email: request.email.toLowerCase() },
+      where: { email },
     });
 
     if (existingEmail) {
@@ -119,12 +120,15 @@ export class AuthService {
     }
 
     const hashedPassword = await hashPassword(request.password);
-    const { school, user, responseData } = await prisma.$transaction(async (tx) => {
+    const verificationOtp = crypto.randomInt(100000, 1000000).toString();
+    const verificationOtpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    const user = await prisma.$transaction(async (tx) => {
       const school = await tx.school.create({
         data: {
           name: request.schoolName,
           address: request.address || "",
-          contactEmail: request.email.toLowerCase(),
+          contactEmail: email,
           contactPhone: request.phone || "",
           slug,
           planId: freePlan!.id,
@@ -142,37 +146,26 @@ export class AuthService {
         data: {
           schoolId: school.id,
           name: request.adminName,
-          email: request.email.toLowerCase(),
+          email,
           passwordHash: hashedPassword,
           role: "SchoolAdmin",
           isActive: true,
           adminRole: request.adminRole || null,
-          isVerified: true,
+          isVerified: false,
+          verificationOtp,
+          verificationOtpExpiry,
         },
       });
 
-      const userWithSchool = { ...user, school: { ...school, plan: { name: "Free" } } };
-      const responseData = this.generateAuthResponseData(userWithSchool, school.name, school.logoUrl);
-      await tx.user.update({
-        where: { id: user.id },
-        data: {
-          refreshToken: responseData.refreshToken,
-          refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
-
-      return { school, user, responseData };
+      return user;
     });
 
-    await emailService.sendSchoolWelcomeEmail(
-      user.email,
-      user.name,
-      school.name,
-      school.slug,
-      "Free"
-    ).catch((err) => console.error("[AuthService] School welcome email error:", err));
+    await emailService.sendVerificationOtpEmail(user.email, user.name, verificationOtp);
 
-    return successResponse(responseData, "School registered successfully.");
+    return successResponse(
+      { email: user.email, requiresVerification: true },
+      "School registered successfully. Check your email for the verification OTP."
+    );
   }
 
   static async login(request: any) {
@@ -210,6 +203,10 @@ export class AuthService {
 
     if (!user.isActive) {
       return failResponse("Your account has been deactivated. Contact your administrator.");
+    }
+
+    if (!user.isVerified) {
+      return failResponse("Email verification is required. Please verify your email using the OTP sent.");
     }
 
     if (user.role !== "SuperAdmin" && user.school) {
@@ -435,7 +432,7 @@ export class AuthService {
       return failResponse("Email is already verified.");
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     await prisma.user.update({

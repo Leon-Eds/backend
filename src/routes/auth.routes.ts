@@ -109,8 +109,8 @@ router.post("/create-super-admin", registrationLimit, validateBody(createSuperAd
  *               adminRole:
  *                 type: string
  *     responses:
- *       201:
- *         description: School registered successfully
+ *       200:
+ *         description: School registered; an email verification OTP has been sent
  *       400:
  *         description: Bad request
  */
