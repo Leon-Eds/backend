@@ -7,6 +7,7 @@ const REQUIRED_PRODUCTION_ENV = [
   "FRONTEND_URL",
   "RESEND_API_KEY",
   "FROM_EMAIL",
+  "CONTACT_EMAIL",
 ] as const;
 
 function missingVariables(names: readonly string[]): string[] {

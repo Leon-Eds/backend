@@ -39,6 +39,7 @@ import bursarRoutes from "./routes/bursar.routes";
 import promotionRoutes from "./routes/promotion.routes";
 import reportRoutes from "./routes/report.routes";
 import schemeOfWorkRoutes from "./routes/scheme-of-work.routes";
+import contactRoutes from "./routes/contact.routes";
 
 validateRuntimeConfiguration();
 
@@ -193,6 +194,7 @@ app.use("/api/bursar", bursarRoutes);
 app.use("/api/promotion", promotionRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/scheme-of-work", schemeOfWorkRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Error Handling Middleware (Must be registered last)
 app.use(errorMiddleware);

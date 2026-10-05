@@ -21,7 +21,7 @@ function getEmailClient() {
   return { resend, fromEmail };
 }
 
-async function sendMail(to: string, subject: string, html: string) {
+async function sendMail(to: string, subject: string, html: string, replyTo?: string) {
   const client = getEmailClient();
 
   try {
@@ -30,6 +30,7 @@ async function sendMail(to: string, subject: string, html: string) {
       to,
       subject,
       html,
+      ...(replyTo ? { replyTo } : {}),
     });
     if (response.error) {
       throw new Error(response.error.message || JSON.stringify(response.error));
@@ -121,6 +122,17 @@ export const emailService = {
   async sendVerificationOtpEmail(to: string, name: string, otp: string) {
     const { subject, html } = emailTemplates.getVerificationOtp(name, otp);
     return sendMail(to, subject, html);
+  },
+
+  /**
+   * Deliver a public landing-page enquiry to the LeonEd contact inbox.
+   */
+  async sendContactQueryEmail(
+    to: string,
+    query: { name: string; email: string; phone?: string; schoolName: string; message?: string }
+  ) {
+    const { subject, html } = emailTemplates.getContactQuery(query);
+    return sendMail(to, subject, html, query.email);
   },
 
   /**

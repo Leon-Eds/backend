@@ -192,6 +192,16 @@ function wrapInShell(title: string, headerTitle: string, bodyHtml: string): stri
   `;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character]!);
+}
+
 export const emailTemplates = {
   /**
    * 1. School Registration Welcome Email
@@ -728,6 +738,47 @@ export const emailTemplates = {
       <div style="text-align: center;">
         <a href="https://leoned.app/login" class="btn-orange" target="_blank">Renew Subscription Now</a>
       </div>
+      `
+    );
+    return { subject, html };
+  },
+
+  /**
+   * Public landing-page contact enquiry.
+   */
+  getContactQuery(query: {
+    name: string;
+    email: string;
+    phone?: string;
+    schoolName: string;
+    message?: string;
+  }): { subject: string; html: string } {
+    const name = escapeHtml(query.name);
+    const email = escapeHtml(query.email);
+    const phone = query.phone ? escapeHtml(query.phone) : "Not provided";
+    const schoolName = escapeHtml(query.schoolName);
+    const message = query.message
+      ? escapeHtml(query.message).replace(/\r?\n/g, "<br>")
+      : "No additional message was provided.";
+    const safeSchoolName = query.schoolName.replace(/[\r\n]+/g, " ").trim();
+    const subject = `Demo request from ${safeSchoolName}`;
+    const html = wrapInShell(
+      `Demo request from ${schoolName}`,
+      "New Demo Request",
+      `
+      <h2>${schoolName}</h2>
+      <div class="card">
+        <table>
+          <tr><td class="label">Name:</td><td class="value"><strong>${name}</strong></td></tr>
+          <tr><td class="label">Email:</td><td class="value">${email}</td></tr>
+          <tr><td class="label">Phone:</td><td class="value">${phone}</td></tr>
+          <tr><td class="label">School:</td><td class="value">${schoolName}</td></tr>
+        </table>
+      </div>
+      <div class="alert-box">
+        ${message}
+      </div>
+      <p>Reply to this email to respond directly to ${name} about their demo request.</p>
       `
     );
     return { subject, html };
