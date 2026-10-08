@@ -14,6 +14,39 @@ test("password reset email uses the configured frontend URL", () => {
   assert.doesNotMatch(html, /https:\/\/leoned\.app\/reset-password/);
 });
 
+test("teacher and student welcome emails use the active frontend login and omit the apple emoji", () => {
+  const originalFrontendUrl = process.env.FRONTEND_URL;
+
+  try {
+    process.env.FRONTEND_URL = "https://www.leoned.ng/";
+
+    const teacher = emailTemplates.getTeacherWelcome(
+      "Test Teacher",
+      "Test School",
+      "teacher@example.test",
+      "temporary-password"
+    );
+    const student = emailTemplates.getStudentWelcome(
+      "parent@example.test",
+      "Test Parent",
+      "Test Student",
+      "Test School",
+      "student@example.test",
+      "ADM-001",
+      "temporary-password"
+    );
+
+    for (const email of [teacher, student]) {
+      assert.match(email.html, /href="https:\/\/www\.leoned\.ng\/login"/);
+      assert.doesNotMatch(email.html, /https:\/\/leoned\.app\/login/);
+    }
+    assert.doesNotMatch(teacher.html, /🍎/);
+  } finally {
+    if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
+    else process.env.FRONTEND_URL = originalFrontendUrl;
+  }
+});
+
 test("email delivery fails explicitly when unconfigured and uses Resend when configured", async () => {
   const originalApiKey = process.env.RESEND_API_KEY;
   const originalFromEmail = process.env.FROM_EMAIL;

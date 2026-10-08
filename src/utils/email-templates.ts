@@ -1,3 +1,5 @@
+import { resolveFrontendUrl } from "./frontend-url";
+
 /**
  * Utility to wrap body content in a premium, responsive HTML shell.
  */
@@ -285,9 +287,10 @@ export const emailTemplates = {
    */
   getTeacherWelcome(name: string, schoolName: string, systemEmail: string, passwordTemp: string): { subject: string; html: string } {
     const subject = `Welcome to LeonEd Africa — Invitation from ${schoolName}`;
+    const loginUrl = `${resolveFrontendUrl()}/login`;
     const html = wrapInShell(
       subject,
-      `Welcome to the Faculty! 🍎`,
+      `Welcome to the Faculty!`,
       `
       <h2>Account Credentials Created</h2>
       <p>Hello <strong>${name}</strong>,</p>
@@ -317,7 +320,7 @@ export const emailTemplates = {
       <p>For security reasons, we strongly recommend changing this temporary password immediately after your first login.</p>
       
       <div style="text-align: center;">
-        <a href="https://leoned.app/login" class="btn" target="_blank">Log In to Portal</a>
+        <a href="${loginUrl}" class="btn" target="_blank">Log In to Portal</a>
       </div>
       `
     );
@@ -381,6 +384,7 @@ export const emailTemplates = {
     passwordTemp: string
   ): { subject: string; html: string } {
     const subject = `Student Account Onboarding — ${schoolName}`;
+    const loginUrl = `${resolveFrontendUrl()}/login`;
     const html = wrapInShell(
       subject,
       `Welcome to the Portal! 📝`,
@@ -417,7 +421,7 @@ export const emailTemplates = {
       <p>Please click the link below to access the login dashboard:</p>
       
       <div style="text-align: center;">
-        <a href="https://leoned.app/login" class="btn" target="_blank">Access Student Portal</a>
+        <a href="${loginUrl}" class="btn" target="_blank">Access Student Portal</a>
       </div>
       `
     );
