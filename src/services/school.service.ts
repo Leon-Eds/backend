@@ -1,5 +1,6 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
+import { resolveAttendanceNotificationSettings } from "./attendance.service";
 
 export class SchoolService {
   private static mapToResponse(school: any) {
@@ -36,6 +37,9 @@ export class SchoolService {
       principalName: school.principalName || "",
       principalSignatureUrl: school.principalSignatureUrl || "",
       schoolStampUrl: school.schoolStampUrl || "",
+      notificationSettings: {
+        attendance: resolveAttendanceNotificationSettings(school.notificationSettings),
+      },
     };
   }
 
@@ -123,6 +127,7 @@ export class SchoolService {
         principalName: request.principalName !== undefined ? request.principalName : undefined,
         principalSignatureUrl: request.principalSignatureUrl !== undefined ? request.principalSignatureUrl : undefined,
         schoolStampUrl: request.schoolStampUrl !== undefined ? request.schoolStampUrl : undefined,
+        notificationSettings: request.notificationSettings !== undefined ? request.notificationSettings : undefined,
       },
       include: {
         teachers: { select: { isActive: true } },

@@ -127,6 +127,7 @@ model School {
   principalName            String?      @default("") @db.VarChar(200)
   principalSignatureUrl    String?      @default("") @db.VarChar(500)
   schoolStampUrl           String?      @default("") @db.VarChar(500)
+  notificationSettings     Json?        /// JSON object for parent notifications: { attendance: { enabled, notifyOn: ["Present","Absent","Late"] } }
 
   plan             PaymentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 

@@ -43,6 +43,37 @@ async function sendMail(to: string, subject: string, html: string, replyTo?: str
   }
 }
 
+// Resend accepts at most 100 emails per batch request
+const RESEND_BATCH_LIMIT = 100;
+
+async function sendBatchMail(messages: Array<{ to: string; subject: string; html: string }>) {
+  if (messages.length === 0) {
+    return { success: true, sent: 0 };
+  }
+
+  const client = getEmailClient();
+  let sent = 0;
+
+  for (let i = 0; i < messages.length; i += RESEND_BATCH_LIMIT) {
+    const chunk = messages.slice(i, i + RESEND_BATCH_LIMIT);
+    try {
+      const response = await client.resend.batch.send(
+        chunk.map((message) => ({ from: client.fromEmail, ...message }))
+      );
+      if (response.error) {
+        throw new Error(response.error.message || JSON.stringify(response.error));
+      }
+      sent += chunk.length;
+      console.log(`[Email Service] Batch of ${chunk.length} emails sent successfully.`);
+    } catch (error) {
+      console.error(`[Email Service] Failed to send email batch via Resend API:`, error);
+      throw error;
+    }
+  }
+
+  return { success: true, sent };
+}
+
 export const emailService = {
   /**
    * Send Welcome Email to School Admin upon Registration
@@ -180,5 +211,18 @@ export const emailService = {
   ) {
     const { subject, html } = emailTemplates.getSubscriptionDowngradedNotification(adminName, schoolName, planName, maxTeachers, maxStudents);
     return sendMail(to, subject, html);
+  },
+
+  /**
+   * Send Daily Attendance Notifications to parents/guardians in batches
+   */
+  async sendAttendanceNotifications(
+    notifications: Array<{ to: string } & Parameters<typeof emailTemplates.getAttendanceNotification>[0]>
+  ) {
+    const messages = notifications.map(({ to, ...details }) => ({
+      to,
+      ...emailTemplates.getAttendanceNotification(details),
+    }));
+    return sendBatchMail(messages);
   }
 };

@@ -1,5 +1,29 @@
 import { prisma } from "../config/db";
 import { successResponse, failResponse } from "../utils/response";
+import { emailService } from "../utils/email";
+
+type AttendanceStatusValue = "Present" | "Absent" | "Late";
+
+interface AttendanceChange {
+  studentId: string;
+  status: AttendanceStatusValue;
+  remarks?: string;
+}
+
+/**
+ * Resolve a school's attendance notification preferences.
+ * Schools without saved preferences notify parents of every status.
+ */
+export function resolveAttendanceNotificationSettings(notificationSettings: any): {
+  enabled: boolean;
+  notifyOn: AttendanceStatusValue[];
+} {
+  const attendance = notificationSettings?.attendance || {};
+  return {
+    enabled: attendance.enabled ?? true,
+    notifyOn: Array.isArray(attendance.notifyOn) ? attendance.notifyOn : ["Present", "Absent", "Late"],
+  };
+}
 
 export class AttendanceService {
 
@@ -10,6 +34,62 @@ export class AttendanceService {
     return prisma.teacher.findFirst({
       where: { userId, schoolId },
     });
+  }
+
+  /**
+   * Helper: Email parents/guardians about attendance records that were newly
+   * created or whose status changed. Failures are logged and never surface to
+   * the caller, because the attendance itself has already been saved.
+   */
+  private static async notifyParents(schoolId: string, dateStr: string, changes: AttendanceChange[]) {
+    if (changes.length === 0) return;
+
+    try {
+      const school = await prisma.school.findUnique({
+        where: { id: schoolId },
+        select: { name: true, notificationSettings: true },
+      });
+      if (!school) return;
+
+      const settings = resolveAttendanceNotificationSettings(school.notificationSettings);
+      if (!settings.enabled) return;
+
+      const notifiable = changes.filter((change) => settings.notifyOn.includes(change.status));
+      if (notifiable.length === 0) return;
+
+      const students = await prisma.student.findMany({
+        where: { id: { in: notifiable.map((change) => change.studentId) }, schoolId },
+        select: {
+          id: true,
+          fullName: true,
+          arm: true,
+          class: { select: { name: true } },
+          parent: { select: { fullName: true, email: true } },
+        },
+      });
+      const studentMap = new Map(students.map((student) => [student.id, student]));
+
+      const notifications = notifiable.flatMap((change) => {
+        const student = studentMap.get(change.studentId);
+        const parentEmail = student?.parent?.email?.trim();
+        if (!student || !parentEmail) return [];
+
+        return [{
+          to: parentEmail,
+          parentName: student.parent!.fullName,
+          studentName: student.fullName,
+          schoolName: school.name,
+          className: student.class ? `${student.class.name} ${student.arm || ""}`.trim() : "N/A",
+          date: dateStr,
+          status: change.status,
+          remarks: change.remarks,
+        }];
+      });
+
+      await emailService.sendAttendanceNotifications(notifications);
+    } catch (err) {
+      console.error("[AttendanceService] Attendance notification email error:", err);
+    }
   }
 
   /**
@@ -153,6 +233,13 @@ export class AttendanceService {
       return failResponse("Every attendance record must reference an active student in this class.");
     }
 
+    // Capture existing statuses so parents are only notified of new or changed records
+    const existingRecords = await prisma.attendance.findMany({
+      where: { schoolId, studentId: { in: requestedStudentIds }, date: parsedDate },
+      select: { studentId: true, status: true },
+    });
+    const previousStatusMap = new Map(existingRecords.map((record) => [record.studentId, record.status]));
+
     // Create or update records in a transaction
     const operations = request.records.map((rec: any) => {
       const data = {
@@ -183,6 +270,11 @@ export class AttendanceService {
     });
 
     await prisma.$transaction(operations);
+
+    const changes: AttendanceChange[] = request.records
+      .filter((rec: any) => previousStatusMap.get(rec.studentId) !== rec.status)
+      .map((rec: any) => ({ studentId: rec.studentId, status: rec.status, remarks: rec.remarks || "" }));
+    await this.notifyParents(schoolId, request.date, changes);
 
     return successResponse(true, "Attendance recorded successfully.");
   }
@@ -375,6 +467,10 @@ export class AttendanceService {
       }
     });
 
+    const scannedStatus = request.status || "Present";
+    const scannedRemarks = request.remarks || "Scanned QR Code";
+    let shouldNotifyScannedStudent = false;
+
     if (existingCount === 0) {
       // Find all active students in class
       const activeStudents = await prisma.student.findMany({
@@ -402,7 +498,22 @@ export class AttendanceService {
       });
 
       await prisma.$transaction(operations);
+
+      // Unscanned students are only defaulted to Absent, so their parents are not notified here
+      shouldNotifyScannedStudent = activeStudents.some((s) => s.id === student.id);
     } else {
+      const previousRecord = await prisma.attendance.findUnique({
+        where: {
+          schoolId_studentId_date: {
+            schoolId,
+            studentId: student.id,
+            date: parsedDate,
+          }
+        },
+        select: { status: true },
+      });
+      shouldNotifyScannedStudent = previousRecord?.status !== scannedStatus;
+
       // Daily sheet already exists, upsert just this student
       const data = {
         schoolId,
@@ -429,6 +540,12 @@ export class AttendanceService {
           takenByTeacherId: teacherId,
         }
       });
+    }
+
+    if (shouldNotifyScannedStudent) {
+      await this.notifyParents(schoolId, request.date, [
+        { studentId: student.id, status: scannedStatus, remarks: scannedRemarks },
+      ]);
     }
 
     return successResponse(true, "Attendance recorded successfully via QR code scan.");

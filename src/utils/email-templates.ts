@@ -786,5 +786,88 @@ export const emailTemplates = {
       `
     );
     return { subject, html };
+  },
+
+  /**
+   * Daily Attendance Notification Email (sent to the student's parent/guardian)
+   */
+  getAttendanceNotification(details: {
+    parentName: string;
+    studentName: string;
+    schoolName: string;
+    className: string;
+    date: string;
+    status: "Present" | "Absent" | "Late";
+    remarks?: string;
+  }): { subject: string; html: string } {
+    const parentName = escapeHtml(details.parentName || "Parent/Guardian");
+    const studentName = escapeHtml(details.studentName);
+    const schoolName = escapeHtml(details.schoolName);
+    const className = escapeHtml(details.className || "N/A");
+    const remarks = details.remarks ? escapeHtml(details.remarks) : "";
+    const formattedDate = new Date(`${details.date}T00:00:00.000Z`).toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+
+    const statusCopy = {
+      Present: { label: "Present", color: "#004b30", boxClass: "alert-box", message: `✓ ${studentName} was marked present at school today.` },
+      Late: { label: "Late", color: "#b45309", boxClass: "alert-box-warning", message: `⚠ ${studentName} arrived late to school today.` },
+      Absent: { label: "Absent", color: "#b91c1c", boxClass: "alert-box-warning", message: `⚠ ${studentName} was marked absent from school today.` },
+    }[details.status];
+
+    const safeStudentName = details.studentName.replace(/[\r\n]+/g, " ").trim();
+    const safeSchoolName = details.schoolName.replace(/[\r\n]+/g, " ").trim();
+    const subject = `Attendance: ${safeStudentName} marked ${statusCopy.label} — ${safeSchoolName}`;
+    const loginUrl = `${resolveFrontendUrl()}/login`;
+
+    const html = wrapInShell(
+      escapeHtml(subject),
+      `Daily Attendance Update`,
+      `
+      <h2>Attendance for ${formattedDate}</h2>
+      <p>Dear <strong>${parentName}</strong>,</p>
+      <p>This is an update on the attendance record for your child at <strong>${schoolName}</strong>.</p>
+
+      <div class="${statusCopy.boxClass}">
+        ${statusCopy.message}
+      </div>
+
+      <div class="card">
+        <table>
+          <tr>
+            <td class="label">Student Name:</td>
+            <td class="value">${studentName}</td>
+          </tr>
+          <tr>
+            <td class="label">Class:</td>
+            <td class="value">${className}</td>
+          </tr>
+          <tr>
+            <td class="label">Date:</td>
+            <td class="value">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td class="label">Status:</td>
+            <td class="value" style="color: ${statusCopy.color};"><strong>${statusCopy.label}</strong></td>
+          </tr>
+          ${remarks ? `<tr>
+            <td class="label">Remarks:</td>
+            <td class="value">${remarks}</td>
+          </tr>` : ""}
+        </table>
+      </div>
+
+      <p>If you have any questions about this record, please contact the school directly.</p>
+
+      <div style="text-align: center;">
+        <a href="${loginUrl}" class="btn" target="_blank">View Attendance History</a>
+      </div>
+      `
+    );
+    return { subject, html };
   }
 };
