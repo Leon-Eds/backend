@@ -194,6 +194,9 @@ function wrapInShell(title: string, headerTitle: string, bodyHtml: string): stri
   `;
 }
 
+// LeonEd schools operate in West Africa Time
+const ATTENDANCE_TIME_ZONE = "Africa/Lagos";
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
     "&": "&amp;",
@@ -799,6 +802,7 @@ export const emailTemplates = {
     date: string;
     status: "Present" | "Absent" | "Late";
     remarks?: string;
+    markedAt?: Date;
   }): { subject: string; html: string } {
     const parentName = escapeHtml(details.parentName || "Parent/Guardian");
     const studentName = escapeHtml(details.studentName);
@@ -812,6 +816,14 @@ export const emailTemplates = {
       year: "numeric",
       timeZone: "UTC",
     });
+    const formattedTime = details.markedAt
+      ? `${details.markedAt.toLocaleTimeString("en-GB", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+          timeZone: ATTENDANCE_TIME_ZONE,
+        })} (WAT)`
+      : "";
 
     const statusCopy = {
       Present: { label: "Present", color: "#004b30", boxClass: "alert-box", message: `✓ ${studentName} was marked present at school today.` },
@@ -854,6 +866,10 @@ export const emailTemplates = {
             <td class="label">Status:</td>
             <td class="value" style="color: ${statusCopy.color};"><strong>${statusCopy.label}</strong></td>
           </tr>
+          ${formattedTime ? `<tr>
+            <td class="label">Time Marked:</td>
+            <td class="value">${formattedTime}</td>
+          </tr>` : ""}
           ${remarks ? `<tr>
             <td class="label">Remarks:</td>
             <td class="value">${remarks}</td>

@@ -108,6 +108,7 @@ test("attendance email escapes names and remarks and keeps the subject on one li
     date: "2026-11-05",
     status: "Absent",
     remarks: "<img src=x onerror=alert(1)>",
+    markedAt: new Date("2026-11-05T07:05:00.000Z"),
   });
 
   assert.doesNotMatch(subject, /[\r\n]/);
@@ -115,6 +116,20 @@ test("attendance email escapes names and remarks and keeps the subject on one li
   assert.doesNotMatch(html, /<img|<b>Parent/);
   assert.match(html, /&lt;img src=x/);
   assert.match(html, /Thursday, 5 November 2026/);
+  // 07:05 UTC is 8:05 am in West Africa Time
+  assert.match(html, /Time Marked:[\s\S]*8:05\s?am \(WAT\)/i);
+});
+
+test("attendance email omits the time row when no time is given", () => {
+  const { html } = emailTemplates.getAttendanceNotification({
+    parentName: "Parent",
+    studentName: "Ada Obi",
+    schoolName: "Unity Academy",
+    className: "JSS1 A",
+    date: "2026-11-05",
+    status: "Present",
+  });
+  assert.doesNotMatch(html, /Time Marked/);
 });
 
 test("class attendance emails parents of new or changed records only and skips parents without email", async () => {
@@ -128,6 +143,7 @@ test("class attendance emails parents of new or changed records only and skips p
       assert.deepEqual(sent.map((n) => [n.to, n.status, n.remarks]), [["obi@example.test", "Absent", "Sick"]]);
       assert.equal(sent[0].className, "JSS1 A");
       assert.equal(sent[0].schoolName, "Unity Academy");
+      assert.ok(sent[0].markedAt instanceof Date);
     }
   );
 });
@@ -169,6 +185,7 @@ test("first QR scan of the day emails only the scanned student, not the defaulte
 
     assert.equal(result.success, true);
     assert.deepEqual(sent.map((n) => [n.to, n.status]), [["obi@example.test", "Present"]]);
+    assert.ok(sent[0].markedAt instanceof Date);
   });
 });
 

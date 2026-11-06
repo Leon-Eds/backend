@@ -41,7 +41,7 @@ export class AttendanceService {
    * created or whose status changed. Failures are logged and never surface to
    * the caller, because the attendance itself has already been saved.
    */
-  private static async notifyParents(schoolId: string, dateStr: string, changes: AttendanceChange[]) {
+  private static async notifyParents(schoolId: string, dateStr: string, changes: AttendanceChange[], markedAt: Date) {
     if (changes.length === 0) return;
 
     try {
@@ -83,6 +83,7 @@ export class AttendanceService {
           date: dateStr,
           status: change.status,
           remarks: change.remarks,
+          markedAt,
         }];
       });
 
@@ -270,11 +271,12 @@ export class AttendanceService {
     });
 
     await prisma.$transaction(operations);
+    const markedAt = new Date();
 
     const changes: AttendanceChange[] = request.records
       .filter((rec: any) => previousStatusMap.get(rec.studentId) !== rec.status)
       .map((rec: any) => ({ studentId: rec.studentId, status: rec.status, remarks: rec.remarks || "" }));
-    await this.notifyParents(schoolId, request.date, changes);
+    await this.notifyParents(schoolId, request.date, changes, markedAt);
 
     return successResponse(true, "Attendance recorded successfully.");
   }
@@ -545,7 +547,7 @@ export class AttendanceService {
     if (shouldNotifyScannedStudent) {
       await this.notifyParents(schoolId, request.date, [
         { studentId: student.id, status: scannedStatus, remarks: scannedRemarks },
-      ]);
+      ], new Date());
     }
 
     return successResponse(true, "Attendance recorded successfully via QR code scan.");
