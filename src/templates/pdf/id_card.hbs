@@ -23,8 +23,8 @@
         <!-- Lanyard Hole -->
         <div class="absolute top-3 left-1/2 -translate-x-1/2 w-14 h-3 bg-white rounded-full z-50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"></div>
 
-        <!-- Top Background Shape -->
-        <div class="absolute top-0 left-0 w-full h-40 z-0">
+        <!-- Top Background Shape (kept short so the logo sits on white) -->
+        <div class="absolute top-0 left-0 w-full h-20 z-0">
             <svg viewBox="0 0 100 100" class="w-full h-full" preserveAspectRatio="none">
                 <!-- Gold / Accent Shape -->
                 <path d="M0,0 L100,0 L100,50 Q75,70 50,30 Q25,-10 0,20 Z" fill="{{accentColor}}"/>
@@ -37,10 +37,7 @@
             <!-- School Logo & Name -->
             <div class="flex flex-col items-center mb-4">
                 {{#if schoolLogo}}
-                <!-- White badge keeps the logo readable whatever the theme colour -->
-                <div class="bg-white rounded-xl px-3 py-1.5 shadow-md border-2 flex items-center justify-center" style="border-color: {{themeColor}};">
-                    <img src="{{schoolLogo}}" alt="School Logo" class="h-10 max-w-[140px] object-contain" />
-                </div>
+                <img src="{{schoolLogo}}" alt="School Logo" class="h-12 max-w-[160px] object-contain" />
                 {{else}}
                 <div class="h-12 w-12 rounded-full bg-white flex items-center justify-center font-black text-2xl shadow-sm border-2" style="color: {{themeColor}}; border-color: {{themeColor}};">{{schoolInitial}}</div>
                 {{/if}}
@@ -126,8 +123,9 @@
         <!-- Header sits inside the theme band (same height) so the contact rows always start below the curve -->
         <div class="w-full h-[35%] pt-8 pb-6 flex flex-col items-center justify-center relative z-10 px-6 shrink-0">
             {{#if schoolLogo}}
-            <div class="bg-white rounded-xl px-3 py-1 shadow-md flex items-center justify-center mb-1.5">
-                <img src="{{schoolLogo}}" alt="School Logo" class="h-9 max-w-[140px] object-contain" />
+            <!-- White circular badge keeps the logo readable on the theme band -->
+            <div class="w-16 h-16 rounded-full bg-white p-2 shadow-md flex items-center justify-center overflow-hidden mb-1.5 shrink-0">
+                <img src="{{schoolLogo}}" alt="School Logo" class="max-w-full max-h-full object-contain" />
             </div>
             {{/if}}
             <div class="font-black text-white text-[11px] uppercase tracking-wider text-center leading-tight">{{schoolName}}</div>
