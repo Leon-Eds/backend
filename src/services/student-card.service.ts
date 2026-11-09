@@ -7,15 +7,15 @@ export class StudentCardService {
   /**
    * Returns student ID card data as a JSON payload containing:
    * school name, school logo URL, student name, admission number,
-   * class, issue date (enrolled date), parent name, relationship,
-   * parent phone number, and a QR code (base64 data URI).
+   * class, issue date (enrolled date), a "return to" contact (the school
+   * and its admin phone; parent details are left off for privacy), and a
+   * QR code (base64 data URI).
    */
   static async getStudentIdCardData(schoolId: string, studentId: string): Promise<any> {
     const student = await prisma.student.findFirst({
       where: { id: studentId, schoolId },
       include: {
         class: true,
-        parent: true,
       },
     });
 
@@ -81,10 +81,10 @@ export class StudentCardService {
         passportUrl: student.profilePictureUrl || null,
         issueDate: issueDateStr,
       },
-      parent: {
-        name: student.parent?.fullName || "N/A",
-        phone: student.parent?.phone || "N/A",
-        relationship: student.parent?.relationship || "Guardian",
+      returnContact: {
+        name: school.name,
+        phone: school.contactPhone || "N/A",
+        relationship: "School Admin",
       },
       qrCode: qrCodeDataUri,
     };
@@ -113,11 +113,10 @@ export class StudentCardService {
       studentPassport: cardData.student.passportUrl,
       admissionNumber: cardData.student.admissionNumber,
       className: cardData.student.className,
-      house: cardData.student.bloodGroup || "Red House",
       issueDate: cardData.student.issueDate,
-      emergencyContactName: cardData.parent.name,
-      emergencyContactPhone: cardData.parent.phone,
-      emergencyContactRelation: cardData.parent.relationship,
+      returnContactName: cardData.returnContact.name,
+      returnContactPhone: cardData.returnContact.phone,
+      returnContactRelation: cardData.returnContact.relationship,
       qrCodeImage: cardData.qrCode,
     };
 
