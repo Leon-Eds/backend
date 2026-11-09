@@ -37,7 +37,10 @@
             <!-- School Logo & Name -->
             <div class="flex flex-col items-center mb-4">
                 {{#if schoolLogo}}
-                <img src="{{schoolLogo}}" alt="School Logo" class="h-12 object-contain" />
+                <!-- White badge keeps the logo readable whatever the theme colour -->
+                <div class="bg-white rounded-xl px-3 py-1.5 shadow-md border-2 flex items-center justify-center" style="border-color: {{themeColor}};">
+                    <img src="{{schoolLogo}}" alt="School Logo" class="h-10 max-w-[140px] object-contain" />
+                </div>
                 {{else}}
                 <div class="h-12 w-12 rounded-full bg-white flex items-center justify-center font-black text-2xl shadow-sm border-2" style="color: {{themeColor}}; border-color: {{themeColor}};">{{schoolInitial}}</div>
                 {{/if}}
@@ -123,7 +126,9 @@
         <!-- Header sits inside the theme band (same height) so the contact rows always start below the curve -->
         <div class="w-full h-[35%] pt-8 pb-6 flex flex-col items-center justify-center relative z-10 px-6 shrink-0">
             {{#if schoolLogo}}
-            <img src="{{schoolLogo}}" alt="School Logo" class="h-10 object-contain mb-1" />
+            <div class="bg-white rounded-xl px-3 py-1 shadow-md flex items-center justify-center mb-1.5">
+                <img src="{{schoolLogo}}" alt="School Logo" class="h-9 max-w-[140px] object-contain" />
+            </div>
             {{/if}}
             <div class="font-black text-white text-[11px] uppercase tracking-wider text-center leading-tight">{{schoolName}}</div>
             <h4 class="text-[9px] font-black text-center text-white opacity-90 mt-3">

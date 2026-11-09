@@ -105,7 +105,7 @@ export class StudentCardService {
     const templateData = {
       schoolName: cardData.school.name,
       schoolLogo: cardData.school.logo,
-      schoolWebsite: cardData.school.website || "www.leoned.africa",
+      schoolWebsite: cardData.school.website || "www.leoned.ng",
       schoolInitial: cardData.school.name ? cardData.school.name.charAt(0).toUpperCase() : "S",
       themeColor: cardData.school.schoolTheme?.primaryColor || "#053d26",
       accentColor: cardData.school.schoolTheme?.accentColor || "#b45309",
