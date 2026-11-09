@@ -4,7 +4,7 @@ export const updateSchoolSchema = z.object({
   name: z.string().max(200).optional(),
   address: z.string().max(500).optional(),
   contactEmail: z.string().email("Invalid email address").optional(),
-  contactPhone: z.string().max(30).optional(),
+  contactPhone: z.string().trim().min(1, "School contact phone is required").max(30).optional(),
   logoUrl: z.string().max(500).optional(),
   schoolType: z.string().max(100).optional(),
   city: z.string().max(100).optional(),
