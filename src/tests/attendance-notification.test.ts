@@ -189,7 +189,8 @@ test("first QR scan of the day emails only the scanned student, not the defaulte
   });
 });
 
-test("QR scan does not re-notify when the status is unchanged", async () => {
+// TEMPORARY (demo): repeat scans re-notify even when the status is unchanged
+test("QR scan re-notifies on every scan, even when the status is unchanged", async () => {
   await withAttendanceStubs(
     { existingRecords: [{ studentId: ADA_ID, status: "Present" }, { studentId: BAYO_ID, status: "Absent" }] },
     async (sent) => {
@@ -197,7 +198,7 @@ test("QR scan does not re-notify when the status is unchanged", async () => {
         admissionNumber: "ADM-001",
         date: "2026-11-05",
       });
-      assert.equal(sent.length, 0);
+      assert.equal(sent.length, 1);
     }
   );
 });

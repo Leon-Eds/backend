@@ -504,17 +504,10 @@ export class AttendanceService {
       // Unscanned students are only defaulted to Absent, so their parents are not notified here
       shouldNotifyScannedStudent = activeStudents.some((s) => s.id === student.id);
     } else {
-      const previousRecord = await prisma.attendance.findUnique({
-        where: {
-          schoolId_studentId_date: {
-            schoolId,
-            studentId: student.id,
-            date: parsedDate,
-          }
-        },
-        select: { status: true },
-      });
-      shouldNotifyScannedStudent = previousRecord?.status !== scannedStatus;
+      // TEMPORARY (demo): email parents on every scan, even when the status is unchanged.
+      // To restore, look up the existing record for this student and date and only
+      // notify when previousRecord?.status !== scannedStatus.
+      shouldNotifyScannedStudent = true;
 
       // Daily sheet already exists, upsert just this student
       const data = {
