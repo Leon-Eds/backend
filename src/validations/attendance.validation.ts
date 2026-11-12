@@ -16,5 +16,7 @@ export const scanAttendanceSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   status: z.enum(["Present", "Absent", "Late"]).optional().default("Present"),
   remarks: z.string().max(200).optional().default("Scanned QR Code"),
+  // Explicit check-in or check-out (attendance officer buttons); omitted = automatic
+  mode: z.enum(["checkIn", "checkOut"]).optional(),
 });
 

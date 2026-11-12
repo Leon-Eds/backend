@@ -40,10 +40,12 @@ SELECT
     student."id",
     class."academicSessionId",
     student."classId",
+    -- Compare as text: 'Left' is not a StudentStatus value on databases built from migrations
+    -- (it was added to existing databases directly; 20261113000000 adds it for fresh ones).
     CASE
-        WHEN student."status" = 'Graduated' THEN 'Graduated'::"EnrollmentStatus"
-        WHEN student."status" = 'Left' THEN 'Left'::"EnrollmentStatus"
-        WHEN student."status" = 'Archived' THEN 'Archived'::"EnrollmentStatus"
+        WHEN student."status"::text = 'Graduated' THEN 'Graduated'::"EnrollmentStatus"
+        WHEN student."status"::text = 'Left' THEN 'Left'::"EnrollmentStatus"
+        WHEN student."status"::text = 'Archived' THEN 'Archived'::"EnrollmentStatus"
         ELSE 'Active'::"EnrollmentStatus"
     END,
     student."enrolledAt",

@@ -436,6 +436,8 @@ export class AttendanceService {
    * Auto-initializes other active class students as Absent if the day's sheet doesn't exist.
    * When the school has check-out enabled, a student's first scan of the day checks them in
    * and the next one checks them out, and parents are emailed for both.
+   * `request.mode` ("checkIn" | "checkOut") makes the scan do exactly that instead, so a
+   * student scanned in twice is never checked out by mistake.
    */
   static async recordScanAttendance(
     schoolId: string,
@@ -485,11 +487,15 @@ export class AttendanceService {
       prisma.attendance.count({ where: { schoolId, classId: student.classId, date: parsedDate } }),
     ]);
     const checkOutEnabled = school?.attendanceCheckOutEnabled ?? false;
+    const mode: "checkIn" | "checkOut" | undefined = request.mode;
 
-    // Check-out: the next scan after check-in, when the school uses check-out
-    if (checkOutEnabled && existingRecord?.checkInAt) {
-      // A card held to the camera is read again within seconds; that is not a check-out
-      if (!existingRecord.checkOutAt && now.getTime() - existingRecord.checkInAt.getTime() < CHECK_OUT_MIN_GAP_MS) {
+    // Check-out: requested explicitly, or the next scan after check-in when the school uses check-out
+    if (mode === "checkOut" || (!mode && checkOutEnabled && existingRecord?.checkInAt)) {
+      if (!existingRecord?.checkInAt) {
+        return successResponse({ event: "NotCheckedIn", studentName: student.fullName }, `${student.fullName} hasn't checked in today.`);
+      }
+      // In automatic mode a card held to the camera is read again within seconds; that is not a check-out
+      if (!mode && !existingRecord.checkOutAt && now.getTime() - existingRecord.checkInAt.getTime() < CHECK_OUT_MIN_GAP_MS) {
         return successResponse({
           event: "AlreadyCheckedIn",
           studentName: student.fullName,
@@ -512,6 +518,22 @@ export class AttendanceService {
 
       return successResponse({ event: "CheckOut", studentName: student.fullName, time: now }, `${student.fullName} checked out.`);
     }
+
+    // An explicit check-in for a student already checked in today never checks them out.
+    // DEMO: it re-sends the check-in email on every scan (time of this scan); the first
+    // check-in time stays on the record. To stop the repeat emails, return without notifying.
+    if (mode === "checkIn" && existingRecord?.checkInAt) {
+      await this.notifyParents(schoolId, request.date, [
+        { studentId: student.id, status: existingRecord.status as AttendanceStatusValue, event: "checkIn" },
+      ], now);
+      return successResponse({
+        event: "CheckIn",
+        studentName: student.fullName,
+        time: now,
+        checkInAt: existingRecord.checkInAt,
+      }, `${student.fullName} checked in.`);
+    }
+    const announceCheckIn = checkOutEnabled || mode === "checkIn";
 
     const scannedData = {
       status: scannedStatus,
@@ -551,21 +573,21 @@ export class AttendanceService {
       });
     }
 
-    // Parents hear about a new or changed status; with check-out on, every check-in is announced.
+    // Parents hear about a new or changed status; with check-out on or an explicit check-in, every check-in is announced.
     // Unscanned students are only defaulted to Absent, so their parents are not notified here.
     const isCheckIn = !existingRecord?.checkInAt;
     const statusChanged = existingRecord?.status !== scannedStatus;
-    if (statusChanged || (checkOutEnabled && isCheckIn)) {
+    if (statusChanged || (announceCheckIn && isCheckIn)) {
       await this.notifyParents(schoolId, request.date, [
-        { studentId: student.id, status: scannedStatus, remarks: scannedRemarks, event: checkOutEnabled ? "checkIn" : undefined },
+        { studentId: student.id, status: scannedStatus, remarks: scannedRemarks, event: announceCheckIn ? "checkIn" : undefined },
       ], now);
     }
 
     return successResponse({
-      event: checkOutEnabled && isCheckIn ? "CheckIn" : "Marked",
+      event: announceCheckIn && isCheckIn ? "CheckIn" : "Marked",
       studentName: student.fullName,
       time: now,
-    }, checkOutEnabled && isCheckIn ? `${student.fullName} checked in.` : "Attendance recorded successfully via QR code scan.");
+    }, announceCheckIn && isCheckIn ? `${student.fullName} checked in.` : "Attendance recorded successfully via QR code scan.");
   }
 
   /**

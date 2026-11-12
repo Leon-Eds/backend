@@ -315,3 +315,70 @@ test("check-in and check-out emails say when the student arrived and left", () =
   assert.match(checkOut.subject, /Ada Obi checked out/);
   assert.match(checkOut.html, /Checked Out:[\s\S]*2:15\s?pm \(WAT\)/i);
 });
+
+// DEMO: repeat check-ins re-send the check-in email on every scan
+test("explicit check-in on a student already checked in re-sends the email but never checks them out", async () => {
+  const checkInAt = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  await withAttendanceStubs(
+    { checkOutEnabled: true, existingRecords: [{ studentId: ADA_ID, status: "Present", checkInAt }] },
+    async (sent) => {
+      const writes: any[] = [];
+      const originalUpdate = (prisma.attendance as any).update;
+      (prisma.attendance as any).update = async (args: any) => { writes.push(args); return args.data; };
+      try {
+        const result: any = await AttendanceService.recordScanAttendance(SCHOOL_ID, "officer-user", "AttendanceOfficer", {
+          admissionNumber: "ADM-001",
+          date: "2026-11-05",
+          mode: "checkIn",
+        });
+
+        assert.equal(result.data.event, "CheckIn");
+        assert.deepEqual(sent.map((n) => [n.to, n.event]), [["obi@example.test", "checkIn"]]);
+        assert.equal(writes.length, 0); // no check-out recorded
+      } finally {
+        (prisma.attendance as any).update = originalUpdate;
+      }
+    }
+  );
+});
+
+test("explicit check-in emails the parent even when the school has check-out turned off", async () => {
+  await withAttendanceStubs({ checkOutEnabled: false }, async (sent) => {
+    const result: any = await AttendanceService.recordScanAttendance(SCHOOL_ID, "officer-user", "AttendanceOfficer", {
+      admissionNumber: "ADM-001",
+      date: "2026-11-05",
+      mode: "checkIn",
+    });
+
+    assert.equal(result.data.event, "CheckIn");
+    assert.deepEqual(sent.map((n) => n.event), ["checkIn"]);
+  });
+});
+
+test("explicit check-out works straight after check-in, but not before checking in", async () => {
+  await withAttendanceStubs(
+    { existingRecords: [{ studentId: ADA_ID, status: "Present", checkInAt: new Date(Date.now() - 5000) }] },
+    async (sent) => {
+      const result: any = await AttendanceService.recordScanAttendance(SCHOOL_ID, "officer-user", "AttendanceOfficer", {
+        admissionNumber: "ADM-001",
+        date: "2026-11-05",
+        mode: "checkOut",
+      });
+
+      assert.equal(result.data.event, "CheckOut");
+      assert.deepEqual(sent.map((n) => n.event), ["checkOut"]);
+    }
+  );
+
+  await withAttendanceStubs({ existingRecords: [{ studentId: ADA_ID, status: "Absent" }] }, async (sent) => {
+    const result: any = await AttendanceService.recordScanAttendance(SCHOOL_ID, "officer-user", "AttendanceOfficer", {
+      admissionNumber: "ADM-001",
+      date: "2026-11-05",
+      mode: "checkOut",
+    });
+
+    assert.equal(result.data.event, "NotCheckedIn");
+    assert.equal(sent.length, 0);
+  });
+});
+
