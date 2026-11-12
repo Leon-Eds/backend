@@ -148,6 +148,8 @@ model School {
   schemesOfWork    SchemeOfWork[]
   studentEnrollments StudentEnrollment[]
   feePaymentTransactions FeePaymentTransaction[]
+  feeStructures    FeeStructure[]
+  studentCustomFees StudentCustomFee[]
 }
 
 model User {
@@ -228,6 +230,7 @@ model Student {
   attendances     Attendance[]
   enrollments     StudentEnrollment[]
   feePaymentTransactions FeePaymentTransaction[]
+  customFees      StudentCustomFee[]
 
   @@unique([schoolId, admissionNumber])
   @@index([schoolId])
@@ -529,6 +532,40 @@ model FeePaymentTransaction {
   @@unique([schoolId, reference])
   @@index([schoolId, createdAt])
   @@index([studentId, termId])
+}
+
+/// A fee a school charges per term. "base" fees apply to every student in the listed
+/// class levels (or "All"); "custom" fees apply only to students they are assigned to.
+model FeeStructure {
+  id               String    @id @default(uuid()) @db.Uuid
+  schoolId         String    @db.Uuid
+  name             String    @db.VarChar(200)
+  amount           Decimal   @db.Decimal(12, 2)
+  type             String    @default("base") @db.VarChar(20) /// "base" | "custom"
+  applicableLevels String[]  @default([]) /// Class names (e.g. "JSS 1") or "All"; base fees only
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime? @updatedAt
+
+  school             School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentAssignments StudentCustomFee[]
+
+  @@index([schoolId])
+}
+
+/// Assigns a custom FeeStructure to a student.
+model StudentCustomFee {
+  id             String   @id @default(uuid()) @db.Uuid
+  schoolId       String   @db.Uuid
+  studentId      String   @db.Uuid
+  feeStructureId String   @db.Uuid
+  createdAt      DateTime @default(now())
+
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, feeStructureId])
+  @@index([schoolId])
 }
 
 model Announcement {

@@ -1,4 +1,5 @@
 import { prisma } from "../config/db";
+import { FeeStructureService } from "./fee-structure.service";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
 import { hashPassword } from "../utils/bcrypt";
 import { emailService } from "../utils/email";
@@ -399,15 +400,25 @@ export class BursarService {
       where: { schoolId, termId },
     });
 
+    // Students with no payment recorded yet are expected to pay what their fee structures add up to
+    const expectedFromStructures = await FeeStructureService.computeExpectedAmounts(
+      schoolId,
+      classes.flatMap((cls) => cls.students.map((s) => ({ id: s.id, className: cls.name })))
+    );
+
     const classSummaries = classes.map((cls) => {
       const classStudentIds = cls.students.map((s) => s.id);
       const classFees = fees.filter((f) => classStudentIds.includes(f.studentId));
+      const feeByStudent = new Map(classFees.map((f) => [f.studentId, f]));
 
       const totalStudents = cls.students.length;
       const clearedCount = classFees.filter((f) => f.status === "Cleared").length;
       const owingCount = totalStudents - clearedCount;
       const totalCollected = classFees.reduce((sum, f) => sum + Number(f.amountPaid), 0);
-      const totalExpected = classFees.reduce((sum, f) => sum + Number(f.amountDue), 0);
+      const totalExpected = classStudentIds.reduce((sum, id) => {
+        const fee = feeByStudent.get(id);
+        return sum + (fee ? Number(fee.amountDue) : expectedFromStructures.get(id) || 0);
+      }, 0);
 
       return {
         classId: cls.id,

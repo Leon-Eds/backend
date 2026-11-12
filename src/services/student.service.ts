@@ -37,6 +37,7 @@ export class StudentService {
       status: s.status,
       classId: s.classId,
       className: s.class ? `${s.class.name} ${s.class.arm}`.trim() : null,
+      classLevel: s.class?.name || null, // class name without the arm, as used by fee structures
       enrolledAt: s.enrolledAt,
       createdAt: s.enrolledAt, // map enrolledAt to createdAt for frontend UI
       systemEmail: s.user?.email || null,

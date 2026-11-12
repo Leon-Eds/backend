@@ -1,4 +1,5 @@
 import { prisma } from "../config/db";
+import { FeeStructureService } from "./fee-structure.service";
 import { successResponse, failResponse } from "../utils/response";
 import PDFDocument from "pdfkit";
 
@@ -244,9 +245,15 @@ export class ReportService {
       }),
     ]);
 
+    // Students with no payment recorded yet are expected to pay what their fee structures add up to
+    const expectedFromStructures = await FeeStructureService.computeExpectedAmounts(
+      schoolId,
+      enrollments.map((enrollment) => ({ id: enrollment.studentId, className: enrollment.class.name }))
+    );
+
     const reportData = enrollments.map((enrollment) => {
       const fee = fees.find((payment) => payment.studentId === enrollment.studentId);
-      const amountDue = fee ? Number(fee.amountDue) : 0;
+      const amountDue = fee ? Number(fee.amountDue) : expectedFromStructures.get(enrollment.studentId) || 0;
       const amountPaid = fee ? Number(fee.amountPaid) : 0;
       const balance = amountDue - amountPaid;
       const status = fee ? fee.status : "NotRecorded";

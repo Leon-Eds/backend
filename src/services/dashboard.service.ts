@@ -1,4 +1,5 @@
 import { prisma } from "../config/db";
+import { FeeStructureService } from "./fee-structure.service";
 import { successResponse, failResponse } from "../utils/response";
 
 export class DashboardService {
@@ -269,6 +270,11 @@ export class DashboardService {
       },
     });
 
+    const termSummary = currentTerm
+      ? await FeeStructureService.getTermSummary(schoolId, currentTerm.id)
+      : null;
+    const totals: any = termSummary?.success ? termSummary.data : null;
+
     return successResponse({
       bursarId: user.id,
       fullName: user.name,
@@ -278,6 +284,10 @@ export class DashboardService {
       currentTerm: currentTerm?.termNumber || null,
       pendingPaymentsCount: pendingPayments,
       clearedPaymentsCount: clearedPayments,
+      totalExpected: totals?.totalExpected ?? 0,
+      totalCollected: totals?.totalCollected ?? 0,
+      totalOutstanding: totals?.totalOutstanding ?? 0,
+      collectionRate: totals?.collectionRate ?? 0,
     });
   }
 }
