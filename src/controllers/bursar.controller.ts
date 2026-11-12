@@ -55,6 +55,15 @@ export class BursarController {
     }
   }
 
+  static async getTermFeeRecords(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await BursarService.getTermFeeRecords(req.schoolId!, String(req.params.termId));
+      return res.status(result.success ? 200 : 404).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getClassFeeOverview(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;

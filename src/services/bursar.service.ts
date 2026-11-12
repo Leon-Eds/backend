@@ -183,6 +183,40 @@ export class BursarService {
   }
 
   /**
+   * All fee records for a term in one query (one entry per student with a record),
+   * so the fee clearance page doesn't need a request per class or per student.
+   */
+  static async getTermFeeRecords(schoolId: string, termId: string) {
+    const term = await prisma.term.findFirst({ where: { id: termId, academicSession: { schoolId } }, select: { id: true } });
+    if (!term) return failResponse("Term not found.");
+
+    const fees = await prisma.feePayment.findMany({
+      where: { schoolId, termId },
+      include: { student: { select: { fullName: true, admissionNumber: true } } },
+    });
+
+    return successResponse(fees.map((fee) => {
+      const amountDue = Number(fee.amountDue);
+      const amountPaid = Number(fee.amountPaid);
+      return {
+        id: fee.id,
+        studentId: fee.studentId,
+        studentName: fee.student.fullName,
+        admissionNumber: fee.student.admissionNumber,
+        amountDue,
+        amountPaid,
+        balance: amountDue - amountPaid,
+        status: fee.status,
+        isCleared: fee.status === "Cleared",
+        receiptImageUrl: fee.receiptImageUrl || "",
+        description: fee.description || "",
+        clearedAt: fee.clearedAt,
+        updatedAt: fee.updatedAt ?? fee.createdAt,
+      };
+    }), "Term fee records retrieved.");
+  }
+
+  /**
    * Get class fee overview with list of students paid/owing
    */
   static async getClassFeeOverview(schoolId: string, classId: string, termId: string) {

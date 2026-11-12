@@ -58,6 +58,9 @@ app.use(cors({
     return callback(new Error("Origin is not allowed by CORS policy."));
   },
   credentials: true,
+  // Let browsers reuse the preflight for 2 hours (Chrome's cap); without this nearly every
+  // API call costs an extra OPTIONS round trip
+  maxAge: 7200,
 }));
 app.use(express.json({
   verify: (req, _res, buffer) => {

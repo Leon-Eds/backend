@@ -170,6 +170,26 @@ router.get("/fees/student/:studentId", BursarController.getStudentFeeStatus);
 
 /**
  * @swagger
+ * /api/bursar/fees/term/{termId}:
+ *   get:
+ *     summary: All fee records for a term in one response (one per student with a record)
+ *     tags: [Bursar]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: termId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Term fee records retrieved
+ */
+router.get("/fees/term/:termId", BursarController.getTermFeeRecords);
+
+/**
+ * @swagger
  * /api/bursar/fees/class/{classId}:
  *   get:
  *     summary: Get class fee overview (paid/owing breakdown)
