@@ -100,6 +100,14 @@ export const emailService = {
   },
 
   /**
+   * Send Attendance Officer Invitation and Temporary Credentials
+   */
+  async sendAttendanceOfficerWelcomeEmail(to: string, name: string, schoolName: string, systemEmail: string, passwordTemp: string) {
+    const { subject, html } = emailTemplates.getAttendanceOfficerWelcome(name, schoolName, systemEmail, passwordTemp);
+    return sendMail(to, subject, html);
+  },
+
+  /**
    * Send Bursar Invitation and Temporary Credentials
    */
   async sendBursarWelcomeEmail(to: string, name: string, schoolName: string, systemEmail: string, passwordTemp: string) {

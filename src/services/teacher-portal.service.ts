@@ -408,6 +408,7 @@ export class TeacherPortalService {
       phone: teacher.phone,
       profilePictureUrl: teacher.profilePictureUrl || "",
       signatureUrl: teacher.signatureUrl || "",
+      staffNumber: teacher.staffNumber || "",
     }, "Teacher profile retrieved successfully.");
   }
 

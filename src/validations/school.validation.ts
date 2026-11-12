@@ -24,6 +24,7 @@ export const updateSchoolSchema = z.object({
   principalName: z.string().max(200).optional(),
   principalSignatureUrl: z.string().max(500).optional(),
   schoolStampUrl: z.string().max(500).optional(),
+  attendanceCheckOutEnabled: z.boolean().optional(),
   notificationSettings: z.object({
     attendance: z.object({
       enabled: z.boolean(),

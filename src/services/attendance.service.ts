@@ -4,10 +4,14 @@ import { emailService } from "../utils/email";
 
 type AttendanceStatusValue = "Present" | "Absent" | "Late";
 
+/** Scans this soon after check-in are treated as duplicate reads, not check-outs. */
+const CHECK_OUT_MIN_GAP_MS = 2 * 60 * 1000;
+
 interface AttendanceChange {
   studentId: string;
   status: AttendanceStatusValue;
   remarks?: string;
+  event?: "checkIn" | "checkOut"; // set when the school uses check-in/check-out
 }
 
 /**
@@ -84,6 +88,7 @@ export class AttendanceService {
           status: change.status,
           remarks: change.remarks,
           markedAt,
+          event: change.event,
         }];
       });
 
@@ -175,6 +180,8 @@ export class AttendanceService {
         profilePictureUrl: student.profilePictureUrl,
         status: att ? att.status : null,
         remarks: att ? att.remarks : "",
+        checkInAt: att?.checkInAt ?? null,
+        checkOutAt: att?.checkOutAt ?? null,
       };
     });
 
@@ -402,6 +409,8 @@ export class AttendanceService {
       date: a.date.toISOString().split("T")[0],
       status: a.status,
       remarks: a.remarks,
+      checkInAt: a.checkInAt,
+      checkOutAt: a.checkOutAt,
     }));
 
     return successResponse({
@@ -422,7 +431,11 @@ export class AttendanceService {
 
   /**
    * Scan QR Code / ID card to record attendance for a student.
-   * Auto-initializes other active class students as Absent if daily sheet doesn't exist.
+   * Form teachers can scan students in their own form class; school admins and
+   * attendance officers can scan any student in the school.
+   * Auto-initializes other active class students as Absent if the day's sheet doesn't exist.
+   * When the school has check-out enabled, a student's first scan of the day checks them in
+   * and the next one checks them out, and parents are emailed for both.
    */
   static async recordScanAttendance(
     schoolId: string,
@@ -443,11 +456,10 @@ export class AttendanceService {
     }
 
     let teacherId: string | null = null;
-    let teacherProfile: any = null;
 
     // Enforce Form Teacher boundary
     if (userRole === "Teacher") {
-      teacherProfile = await this.resolveTeacher(schoolId, userId);
+      const teacherProfile = await this.resolveTeacher(schoolId, userId);
       if (!teacherProfile) {
         return failResponse("Teacher profile not found.");
       }
@@ -457,21 +469,57 @@ export class AttendanceService {
       }
       teacherId = teacherProfile.id;
     }
+    // Admins and attendance officers have no teacher profile, so record them by user
+    const takenByUserId = teacherId ? null : userId;
 
     const parsedDate = new Date(`${request.date}T00:00:00.000Z`);
-
-    // Check if daily sheet exists
-    const existingCount = await prisma.attendance.count({
-      where: {
-        schoolId,
-        classId: student.classId,
-        date: parsedDate,
-      }
-    });
-
-    const scannedStatus = request.status || "Present";
+    const recordKey = { schoolId_studentId_date: { schoolId, studentId: student.id, date: parsedDate } };
+    const now = new Date();
+    const scannedStatus: AttendanceStatusValue = request.status || "Present";
     const scannedRemarks = request.remarks || "Scanned QR Code";
-    let shouldNotifyScannedStudent = false;
+
+    const [school, existingRecord, existingCount] = await Promise.all([
+      prisma.school.findUnique({ where: { id: schoolId }, select: { attendanceCheckOutEnabled: true } }),
+      prisma.attendance.findUnique({ where: recordKey, select: { status: true, checkInAt: true, checkOutAt: true } }),
+      // Whether the class's sheet for the day exists yet
+      prisma.attendance.count({ where: { schoolId, classId: student.classId, date: parsedDate } }),
+    ]);
+    const checkOutEnabled = school?.attendanceCheckOutEnabled ?? false;
+
+    // Check-out: the next scan after check-in, when the school uses check-out
+    if (checkOutEnabled && existingRecord?.checkInAt) {
+      // A card held to the camera is read again within seconds; that is not a check-out
+      if (!existingRecord.checkOutAt && now.getTime() - existingRecord.checkInAt.getTime() < CHECK_OUT_MIN_GAP_MS) {
+        return successResponse({
+          event: "AlreadyCheckedIn",
+          studentName: student.fullName,
+          checkInAt: existingRecord.checkInAt,
+        }, `${student.fullName} is already checked in.`);
+      }
+      if (existingRecord.checkOutAt) {
+        return successResponse({
+          event: "AlreadyCheckedOut",
+          studentName: student.fullName,
+          checkInAt: existingRecord.checkInAt,
+          checkOutAt: existingRecord.checkOutAt,
+        }, `${student.fullName} has already checked out today.`);
+      }
+
+      await prisma.attendance.update({ where: recordKey, data: { checkOutAt: now } });
+      await this.notifyParents(schoolId, request.date, [
+        { studentId: student.id, status: existingRecord.status as AttendanceStatusValue, event: "checkOut" },
+      ], now);
+
+      return successResponse({ event: "CheckOut", studentName: student.fullName, time: now }, `${student.fullName} checked out.`);
+    }
+
+    const scannedData = {
+      status: scannedStatus,
+      remarks: scannedRemarks,
+      takenByTeacherId: teacherId,
+      takenByUserId,
+      checkInAt: existingRecord?.checkInAt ?? now,
+    };
 
     if (existingCount === 0) {
       // Find all active students in class
@@ -485,65 +533,39 @@ export class AttendanceService {
 
       // Auto-initialize other students as Absent (Unscanned)
       const operations = activeStudents.map((s) => {
-        const isScanned = s.id === student.id;
-        const data = {
-          schoolId,
-          classId: student.classId!,
-          studentId: s.id,
-          date: parsedDate,
-          status: isScanned ? (request.status || "Present") : "Absent",
-          remarks: isScanned ? (request.remarks || "Scanned QR Code") : "Unscanned (Default Absent)",
-          takenByTeacherId: teacherId,
-        };
+        const base = { schoolId, classId: student.classId!, studentId: s.id, date: parsedDate };
+        const data = s.id === student.id
+          ? { ...base, ...scannedData }
+          : { ...base, status: "Absent" as const, remarks: "Unscanned (Default Absent)", takenByTeacherId: teacherId, takenByUserId };
 
         return prisma.attendance.create({ data });
       });
 
       await prisma.$transaction(operations);
-
-      // Unscanned students are only defaulted to Absent, so their parents are not notified here
-      shouldNotifyScannedStudent = activeStudents.some((s) => s.id === student.id);
     } else {
-      // TEMPORARY (demo): email parents on every scan, even when the status is unchanged.
-      // To restore, look up the existing record for this student and date and only
-      // notify when previousRecord?.status !== scannedStatus.
-      shouldNotifyScannedStudent = true;
-
       // Daily sheet already exists, upsert just this student
-      const data = {
-        schoolId,
-        classId: student.classId,
-        studentId: student.id,
-        date: parsedDate,
-        status: request.status || "Present",
-        remarks: request.remarks || "Scanned QR Code",
-        takenByTeacherId: teacherId,
-      };
-
       await prisma.attendance.upsert({
-        where: {
-          schoolId_studentId_date: {
-            schoolId,
-            studentId: student.id,
-            date: parsedDate,
-          }
-        },
-        create: data,
-        update: {
-          status: request.status || "Present",
-          remarks: request.remarks || "Scanned QR Code",
-          takenByTeacherId: teacherId,
-        }
+        where: recordKey,
+        create: { schoolId, classId: student.classId, studentId: student.id, date: parsedDate, ...scannedData },
+        update: scannedData,
       });
     }
 
-    if (shouldNotifyScannedStudent) {
+    // Parents hear about a new or changed status; with check-out on, every check-in is announced.
+    // Unscanned students are only defaulted to Absent, so their parents are not notified here.
+    const isCheckIn = !existingRecord?.checkInAt;
+    const statusChanged = existingRecord?.status !== scannedStatus;
+    if (statusChanged || (checkOutEnabled && isCheckIn)) {
       await this.notifyParents(schoolId, request.date, [
-        { studentId: student.id, status: scannedStatus, remarks: scannedRemarks },
-      ], new Date());
+        { studentId: student.id, status: scannedStatus, remarks: scannedRemarks, event: checkOutEnabled ? "checkIn" : undefined },
+      ], now);
     }
 
-    return successResponse(true, "Attendance recorded successfully via QR code scan.");
+    return successResponse({
+      event: checkOutEnabled && isCheckIn ? "CheckIn" : "Marked",
+      studentName: student.fullName,
+      time: now,
+    }, checkOutEnabled && isCheckIn ? `${student.fullName} checked in.` : "Attendance recorded successfully via QR code scan.");
   }
 
   /**

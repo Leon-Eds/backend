@@ -333,6 +333,44 @@ export const emailTemplates = {
   /**
    * 3b. Bursar Welcome/Credentials Email
    */
+  getAttendanceOfficerWelcome(name: string, schoolName: string, systemEmail: string, passwordTemp: string): { subject: string; html: string } {
+    const subject = `Welcome to LeonEd Africa — Invitation from ${schoolName}`;
+    const loginUrl = `${resolveFrontendUrl()}/login`;
+    const html = wrapInShell(
+      subject,
+      `Welcome to the Attendance Team!`,
+      `
+      <h2>Attendance Officer Account Created</h2>
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>You have been added as an Attendance Officer at <strong>${schoolName}</strong> on the LeonEd Africa portal. You can scan any student's ID card to record their attendance.</p>
+
+      <div class="card">
+        <table>
+          <tr>
+            <td class="label">School:</td>
+            <td class="value">${schoolName}</td>
+          </tr>
+          <tr>
+            <td class="label">Login Email:</td>
+            <td class="value" style="font-family: monospace; font-size: 15px;"><strong>${systemEmail}</strong></td>
+          </tr>
+          <tr>
+            <td class="label">Password:</td>
+            <td class="value" style="font-family: monospace; font-size: 15px; color: #b45309;">${passwordTemp}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p>For security reasons, we strongly recommend changing this temporary password immediately after your first login.</p>
+
+      <div style="text-align: center;">
+        <a href="${loginUrl}" class="btn" target="_blank">Log In to Portal</a>
+      </div>
+      `
+    );
+    return { subject, html };
+  },
+
   getBursarWelcome(name: string, schoolName: string, systemEmail: string, passwordTemp: string): { subject: string; html: string } {
     const subject = `Welcome to LeonEd Africa — Invitation from ${schoolName}`;
     const html = wrapInShell(
@@ -803,6 +841,7 @@ export const emailTemplates = {
     status: "Present" | "Absent" | "Late";
     remarks?: string;
     markedAt?: Date;
+    event?: "checkIn" | "checkOut";
   }): { subject: string; html: string } {
     const parentName = escapeHtml(details.parentName || "Parent/Guardian");
     const studentName = escapeHtml(details.studentName);
@@ -831,9 +870,21 @@ export const emailTemplates = {
       Absent: { label: "Absent", color: "#b91c1c", boxClass: "alert-box-warning", message: `⚠ ${studentName} was marked absent from school today.` },
     }[details.status];
 
+    // Schools using check-in/check-out tell parents when their child arrived and left
+    if (details.event === "checkIn") {
+      statusCopy.message = details.status === "Late"
+        ? `⚠ ${studentName} checked in late at school${formattedTime ? ` at ${formattedTime}` : ""}.`
+        : `✓ ${studentName} checked in at school${formattedTime ? ` at ${formattedTime}` : ""}.`;
+    } else if (details.event === "checkOut") {
+      statusCopy.boxClass = "alert-box";
+      statusCopy.message = `✓ ${studentName} checked out of school${formattedTime ? ` at ${formattedTime}` : ""}.`;
+    }
+    const timeLabel = details.event === "checkIn" ? "Checked In:" : details.event === "checkOut" ? "Checked Out:" : "Time Marked:";
+
     const safeStudentName = details.studentName.replace(/[\r\n]+/g, " ").trim();
     const safeSchoolName = details.schoolName.replace(/[\r\n]+/g, " ").trim();
-    const subject = `Attendance: ${safeStudentName} marked ${statusCopy.label} — ${safeSchoolName}`;
+    const subjectAction = details.event === "checkIn" ? "checked in" : details.event === "checkOut" ? "checked out" : `marked ${statusCopy.label}`;
+    const subject = `Attendance: ${safeStudentName} ${subjectAction} — ${safeSchoolName}`;
     const loginUrl = `${resolveFrontendUrl()}/login`;
 
     const html = wrapInShell(
@@ -867,7 +918,7 @@ export const emailTemplates = {
             <td class="value" style="color: ${statusCopy.color};"><strong>${statusCopy.label}</strong></td>
           </tr>
           ${formattedTime ? `<tr>
-            <td class="label">Time Marked:</td>
+            <td class="label">${timeLabel}</td>
             <td class="value">${formattedTime}</td>
           </tr>` : ""}
           ${remarks ? `<tr>

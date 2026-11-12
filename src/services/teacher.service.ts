@@ -2,6 +2,20 @@ import { prisma } from "../config/db";
 import { hashPassword } from "../utils/bcrypt";
 import { successResponse, failResponse, createPagedResult } from "../utils/response";
 import { emailService } from "../utils/email";
+import { Prisma } from "@prisma/client";
+
+/** Next free staff number in a school: STF-0001, STF-0002, ... */
+export async function nextStaffNumber(schoolId: string, client: Prisma.TransactionClient | typeof prisma = prisma) {
+  const existing = await client.teacher.findMany({
+    where: { schoolId, staffNumber: { startsWith: "STF-" } },
+    select: { staffNumber: true },
+  });
+  const highest = existing.reduce((max, t) => {
+    const n = parseInt((t.staffNumber || "").slice(4), 10);
+    return Number.isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  return `STF-${String(highest + 1).padStart(4, "0")}`;
+}
 
 export class TeacherService {
   private static mapToResponse(t: any) {
@@ -12,6 +26,7 @@ export class TeacherService {
       email: t.email,
       phone: t.phone,
       profilePictureUrl: t.profilePictureUrl || "",
+      staffNumber: t.staffNumber || "",
       isActive: t.isActive,
       createdAt: t.createdAt,
       assignments: t.subjectAssignments
@@ -136,6 +151,7 @@ export class TeacherService {
         data: {
           schoolId,
           userId: user.id,
+          staffNumber: await nextStaffNumber(schoolId, tx),
           fullName: request.fullName,
           email: request.email.toLowerCase(),
           phone: request.phone || "",
@@ -182,9 +198,19 @@ export class TeacherService {
       return failResponse("Teacher not found.");
     }
 
+    const staffNumber = request.staffNumber !== undefined ? request.staffNumber.trim() || null : undefined;
+    if (staffNumber) {
+      const taken = await prisma.teacher.findFirst({
+        where: { schoolId, staffNumber, id: { not: teacherId } },
+        select: { id: true },
+      });
+      if (taken) return failResponse(`Staff number ${staffNumber} is already used by another teacher.`);
+    }
+
     const updatedTeacher = await prisma.teacher.update({
       where: { id: teacherId },
       data: {
+        staffNumber,
         fullName: request.fullName !== undefined ? request.fullName : undefined,
         phone: request.phone !== undefined ? request.phone : undefined,
         profilePictureUrl: request.profilePictureUrl !== undefined ? request.profilePictureUrl : undefined,

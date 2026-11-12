@@ -1,5 +1,7 @@
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types";
+import { StaffCardService } from "../services/staff-card.service";
+import { prisma } from "../config/db";
 import { TeacherPortalService } from "../services/teacher-portal.service";
 
 export class TeacherPortalController {
@@ -126,6 +128,30 @@ export class TeacherPortalController {
       const userId = req.user?.id!;
       const result = await TeacherPortalService.sendClassBroadcast(schoolId, userId, req.body);
       return res.status(result.success ? 201 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async downloadMyIdCardPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const teacher = await prisma.teacher.findFirst({
+        where: { schoolId, userId: req.user?.id },
+        select: { id: true },
+      });
+      if (!teacher) {
+        return res.status(404).json({ success: false, message: "Teacher profile not found." });
+      }
+
+      const result = await StaffCardService.generateStaffIdCardPdf(schoolId, teacher.id);
+      if (!result.success || !result.data) {
+        return res.status(400).json(result);
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=staff_id_card_${result.data.staffNumber}.pdf`);
+      return res.send(result.data.pdfBuffer);
     } catch (error) {
       next(error);
     }

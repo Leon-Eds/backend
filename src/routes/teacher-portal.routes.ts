@@ -2,8 +2,10 @@ import { Router } from "express";
 import { TeacherPortalController } from "../controllers/teacher-portal.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
+import { createRateLimiter } from "../middlewares/security.middleware";
 
 const router = Router();
+const staffCardPdfLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: "staff-id-pdf-self" });
 
 // All routes require Teacher role + school context
 router.use(authMiddleware(["Teacher"]));
@@ -213,6 +215,20 @@ router.get("/score-progress", TeacherPortalController.getScoreProgress);
  *         description: Teacher profile retrieved successfully
  */
 router.get("/profile", TeacherPortalController.getMyProfile);
+
+/**
+ * @swagger
+ * /api/teacher-portal/idcard/pdf:
+ *   get:
+ *     summary: Download the authenticated teacher's own staff ID card PDF
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Staff ID card PDF
+ */
+router.get("/idcard/pdf", staffCardPdfLimit, TeacherPortalController.downloadMyIdCardPdf);
 
 /**
  * @swagger

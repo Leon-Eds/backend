@@ -14,6 +14,7 @@ enum UserRole {
   Teacher
   Student
   Bursar
+  AttendanceOfficer
 }
 
 enum SubscriptionPlan {
@@ -128,6 +129,7 @@ model School {
   principalSignatureUrl    String?      @default("") @db.VarChar(500)
   schoolStampUrl           String?      @default("") @db.VarChar(500)
   notificationSettings     Json?        /// JSON object for parent notifications: { attendance: { enabled, notifyOn: ["Present","Absent","Late"] } }
+  attendanceCheckOutEnabled Boolean     @default(false) /// When on, a student's second scan of the day records check-out
 
   plan             PaymentPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
 
@@ -180,6 +182,7 @@ model User {
   announcements      Announcement[]     @relation("UserToAnnouncement")
   targetedAnnouncements Announcement[] @relation("UserToTargetedAnnouncement")
   recordedFeeTransactions FeePaymentTransaction[] @relation("UserToRecordedFeeTransaction")
+  takenAttendances   Attendance[]       @relation("UserToTakenAttendance")
 }
 
 
@@ -245,6 +248,7 @@ model Teacher {
   phone             String    @default("") @db.VarChar(30)
   profilePictureUrl String    @default("") @db.VarChar(500)
   signatureUrl      String?   @default("") @db.VarChar(500)
+  staffNumber       String?   @db.VarChar(50) /// Shown on the staff ID card, e.g. STF-0001
   isActive          Boolean   @default(true)
   suspendedBySubscription Boolean @default(false)
   createdAt         DateTime  @default(now())
@@ -258,6 +262,7 @@ model Teacher {
   takenAttendances   Attendance[]
   schemesOfWork      SchemeOfWork[]
 
+  @@unique([schoolId, staffNumber])
   @@index([schoolId])
 }
 
@@ -602,6 +607,9 @@ model Attendance {
   status            AttendanceStatus
   remarks           String           @default("") @db.VarChar(200)
   takenByTeacherId  String?          @db.Uuid
+  takenByUserId     String?          @db.Uuid /// Who recorded it when not a teacher, e.g. an attendance officer
+  checkInAt         DateTime?        /// Time of the first ID card scan of the day
+  checkOutAt        DateTime?        /// Time of the check-out scan (only when the school has check-out enabled)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime?        @updatedAt
 
@@ -609,6 +617,7 @@ model Attendance {
   class             Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
   student           Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   takenByTeacher    Teacher?         @relation(fields: [takenByTeacherId], references: [id], onDelete: SetNull)
+  takenByUser       User?            @relation("UserToTakenAttendance", fields: [takenByUserId], references: [id], onDelete: SetNull)
 
   @@unique([schoolId, studentId, date])
   @@index([schoolId, classId, date])

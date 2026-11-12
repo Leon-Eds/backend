@@ -37,6 +37,7 @@ export class SchoolService {
       principalName: school.principalName || "",
       principalSignatureUrl: school.principalSignatureUrl || "",
       schoolStampUrl: school.schoolStampUrl || "",
+      attendanceCheckOutEnabled: school.attendanceCheckOutEnabled ?? false,
       notificationSettings: {
         attendance: resolveAttendanceNotificationSettings(school.notificationSettings),
       },
@@ -128,6 +129,7 @@ export class SchoolService {
         principalSignatureUrl: request.principalSignatureUrl !== undefined ? request.principalSignatureUrl : undefined,
         schoolStampUrl: request.schoolStampUrl !== undefined ? request.schoolStampUrl : undefined,
         notificationSettings: request.notificationSettings !== undefined ? request.notificationSettings : undefined,
+        attendanceCheckOutEnabled: request.attendanceCheckOutEnabled !== undefined ? request.attendanceCheckOutEnabled : undefined,
       },
       include: {
         teachers: { select: { isActive: true } },

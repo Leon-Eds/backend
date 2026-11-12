@@ -10,6 +10,7 @@ export const createTeacherSchema = z.object({
 
 export const updateTeacherSchema = z.object({
   fullName: z.string().max(200).optional(),
+  staffNumber: z.string().max(50).optional(),
   phone: z.string().max(30).optional(),
   profilePictureUrl: z.string().max(500).optional(),
 });

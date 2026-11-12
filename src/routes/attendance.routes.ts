@@ -227,7 +227,7 @@ router.get(
 router.post(
   "/scan",
   scanLimit,
-  authMiddleware(["SchoolAdmin", "Teacher"]),
+  authMiddleware(["SchoolAdmin", "Teacher", "AttendanceOfficer"]),
   requireSchoolId,
   validateBody(scanAttendanceSchema),
   AttendanceController.recordScanAttendance

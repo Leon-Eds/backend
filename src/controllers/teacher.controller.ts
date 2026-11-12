@@ -1,5 +1,6 @@
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types";
+import { StaffCardService } from "../services/staff-card.service";
 import { TeacherService } from "../services/teacher.service";
 
 export class TeacherController {
@@ -93,6 +94,22 @@ export class TeacherController {
         return res.status(200).json(result);
       }
       return res.status(400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async downloadIdCardPdf(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const result = await StaffCardService.generateStaffIdCardPdf(schoolId, String(req.params.id));
+      if (!result.success || !result.data) {
+        return res.status(400).json(result);
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=staff_id_card_${result.data.staffNumber}.pdf`);
+      return res.send(result.data.pdfBuffer);
     } catch (error) {
       next(error);
     }

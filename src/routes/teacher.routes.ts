@@ -4,8 +4,10 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireSchoolId } from "../middlewares/tenant.middleware";
 import { validateBody } from "../middlewares/validation.middleware";
 import { createTeacherSchema, updateTeacherSchema, assignTeacherSchema } from "../validations/teacher.validation";
+import { createRateLimiter } from "../middlewares/security.middleware";
 
 const router = Router();
+const pdfLimit = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 30, keyPrefix: "staff-id-pdf" });
 
 router.use(authMiddleware(["SuperAdmin", "SchoolAdmin"]));
 router.use(requireSchoolId);
@@ -66,6 +68,26 @@ router.get("/", TeacherController.getAll);
  *         description: Teacher not found
  */
 router.get("/:id", TeacherController.getById);
+
+/**
+ * @swagger
+ * /api/teacher/{id}/idcard/pdf:
+ *   get:
+ *     summary: Download a teacher's staff ID card PDF (SchoolAdmin)
+ *     tags: [Teachers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Staff ID card PDF
+ */
+router.get("/:id/idcard/pdf", pdfLimit, TeacherController.downloadIdCardPdf);
 
 /**
  * @swagger
