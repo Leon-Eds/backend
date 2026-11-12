@@ -3,6 +3,7 @@ import { successResponse, failResponse } from "../utils/response";
 import { GradingService } from "./grading.service";
 import { formatOrdinal } from "../utils/ordinal";
 import { PdfGenerator } from "../utils/pdf-generator";
+import { ResultService } from "./result.service";
 
 export class ReportCardService {
   static async generateReportCard(schoolId: string, studentId: string, termId: string) {
@@ -138,79 +139,72 @@ export class ReportCardService {
   }
 
   static async generateReportCardPdf(schoolId: string, studentId: string, termId: string): Promise<any> {
-    const reportCardResult = await this.generateReportCard(schoolId, studentId, termId);
-    if (!reportCardResult.success || !reportCardResult.data) {
-      return failResponse(reportCardResult.message);
+    // Build from the same result data the on-screen result sheets use, so the PDF shows
+    // per-subject class averages, real attendance, the teacher's domain ratings and promotion.
+    const resultResponse = await ResultService.getStudentResult(schoolId, studentId, termId);
+    if (!resultResponse.success || !resultResponse.data) {
+      return failResponse(resultResponse.message);
     }
+    const data: any = resultResponse.data;
+    const subjects: any[] = data.subjectScores || [];
+    const affective = data.affectiveDomains || {};
+    const psychomotor = data.psychomotorDomains || {};
+    const show = (value: unknown) => (value === undefined || value === null || value === "" ? "-" : value);
 
-    const data = reportCardResult.data;
-
-    // Fetch term info for daysOpened, nextTermBegins
-    const term = await prisma.term.findFirst({
-      where: { id: termId, academicSession: { schoolId } },
-      include: { academicSession: true }
-    });
-
-    // Map grades for template
-    const grades = (data.subjectScores || []).map((s: any, idx: number) => ({
+    const grades = subjects.map((s: any, idx: number) => ({
       subjectName: s.subjectName,
       ca1: s.firstCA,
       ca2: s.secondCA,
       exam: s.exam,
       total: s.total,
       grade: s.grade,
-      classAvg: data.classAverage ? data.classAverage.toFixed(1) : "-",
+      classAvg: typeof s.classAvg === "number" ? s.classAvg.toFixed(1) : "-",
       pos: s.subjectPosition ? formatOrdinal(s.subjectPosition) : "-",
       remark: s.grade === "A" ? "Excellent" : s.grade === "B" ? "Very Good" : s.grade === "C" ? "Good" : s.grade === "D" ? "Fair" : s.grade === "E" ? "Poor" : "Fail",
       rowBgClass: idx % 2 === 0 ? "bg-[#f8fafc]" : "bg-white",
     }));
 
-    const maxPossibleScore = (data.subjectScores || []).length * 100;
-    const termLabel = `${term?.termNumber || data.term} Term`.toUpperCase();
-    const formattedNextTermBegins = term?.nextTermBegins 
-      ? new Date(term.nextTermBegins).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-      : "TBD";
-
+    const schoolInfo = data.schoolInfo || {};
     const templateData = {
-      schoolName: data.schoolName,
-      schoolAddress: data.schoolAddress || "LeonEd School System",
-      schoolLogo: data.schoolLogoUrl,
-      schoolInitial: data.schoolName ? data.schoolName.charAt(0).toUpperCase() : "S",
-      termLabel,
+      schoolName: schoolInfo.name,
+      schoolAddress: schoolInfo.address || "LeonEd School System",
+      schoolLogo: schoolInfo.logoUrl,
+      schoolInitial: schoolInfo.name ? schoolInfo.name.charAt(0).toUpperCase() : "S",
+      termLabel: `${data.termName} Term`.toUpperCase(),
       studentName: data.studentName,
       admissionNumber: data.admissionNumber,
       className: data.className,
       gender: data.gender,
-      sessionName: data.academicSession,
+      sessionName: data.sessionName,
       classSize: data.classSize,
-      position: data.position ? formatOrdinal(data.position) : "N/A",
-      daysOpened: term?.daysSchoolOpened || "N/A",
-      daysPresent: term?.daysSchoolOpened || "N/A",
-      nextTermBegins: formattedNextTermBegins,
-      studentPassport: data.studentPictureUrl,
+      position: data.position ? formatOrdinal(data.position) : "-",
+      daysOpened: show(data.daysSchoolOpened),
+      daysPresent: show(data.daysPresent),
+      nextTermBegins: data.nextTermBegins || "TBD",
+      studentPassport: data.passportUrl,
       grades,
       totalStudentScore: data.totalScore,
-      maxPossibleScore,
-      averageScore: data.average ? data.average.toFixed(1) : 0,
-      punctualityScore: 5,
-      neatnessScore: 5,
-      politenessScore: 5,
-      honestyScore: 5,
-      cooperationScore: 5,
-      peerRelationshipScore: 5,
-      handwritingScore: 4,
-      publicSpeakingScore: 4,
-      sportsScore: 5,
-      clubParticipationScore: 4,
-      craftScore: 4,
-      musicalSkillScore: 3,
-      teacherRemark: data.teacherComment || "An encouraging performance. Keep working hard to maintain high academic standards.",
+      maxPossibleScore: subjects.length * 100,
+      averageScore: Number(data.average || 0).toFixed(1),
+      punctualityScore: show(affective.punctuality),
+      neatnessScore: show(affective.neatness),
+      politenessScore: show(affective.politeness),
+      honestyScore: show(affective.honesty),
+      cooperationScore: show(affective.cooperation),
+      peerRelationshipScore: show(affective.peerRelationship),
+      handwritingScore: show(psychomotor.handwriting),
+      publicSpeakingScore: show(psychomotor.publicSpeaking),
+      sportsScore: show(psychomotor.sports),
+      clubParticipationScore: show(psychomotor.clubParticipation),
+      craftScore: show(psychomotor.craftSkills),
+      musicalSkillScore: show(psychomotor.musicalSkill),
+      teacherRemark: data.teacherComment || "-",
       teacherSignature: data.formTeacherSignatureUrl,
       teacherName: data.formTeacherName || "Form Teacher",
-      principalSignature: data.resultMetadata?.principalSignatureUrl,
-      principalName: data.resultMetadata?.principalName || "Principal",
-      schoolStamp: data.schoolStampUrl || data.resultMetadata?.schoolStampUrl,
-      promotedTo: data.className,
+      principalSignature: data.principalSignatureUrl,
+      principalName: data.principalName || "Principal",
+      schoolStamp: data.schoolStampUrl,
+      promotedTo: data.promotedTo || "-",
     };
 
     const pdfBuffer = await PdfGenerator.renderTemplateToPdf("report_card", templateData, {

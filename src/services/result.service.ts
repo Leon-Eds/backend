@@ -524,9 +524,17 @@ export class ResultService {
       where: { id: schoolId },
     });
 
-    const totalInClass = await prisma.result.count({
+    // Class-wide averages for the result sheet summary
+    const classAverages = (await prisma.result.findMany({
       where: { schoolId, classId: result.classId, termId },
-    });
+      select: { average: true },
+    })).map((r) => Number(r.average));
+    const totalInClass = classAverages.length;
+    const classAverage = totalInClass > 0
+      ? Math.round((classAverages.reduce((sum, a) => sum + a, 0) / totalInClass) * 100) / 100
+      : 0;
+    const highestAverage = totalInClass > 0 ? Math.max(...classAverages) : 0;
+    const lowestAverage = totalInClass > 0 ? Math.min(...classAverages) : 0;
 
     const scores = await prisma.score.findMany({
       where: { schoolId, studentId, termId },
@@ -669,6 +677,9 @@ export class ResultService {
       subjectCount: result.subjectCount,
       totalStudentsInClass: totalInClass,
       classSize: totalInClass,
+      classAverage,
+      highestAverage,
+      lowestAverage,
       status: result.status,
       teacherComment: result.teacherComment,
       formTeacherRemark: result.teacherComment,
@@ -690,6 +701,11 @@ export class ResultService {
       resultMetadata: {
         classSize: totalInClass,
         totalStudentsInClass: totalInClass,
+        average: Number(result.average),
+        position: result.position,
+        classAverage,
+        highestAverage,
+        lowestAverage,
         formTeacherName: formTeacherInfo.name,
         formTeacherSignatureUrl: formTeacherInfo.signatureUrl,
         principalName: schoolInfo.principalName,
