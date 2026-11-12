@@ -393,6 +393,24 @@ export class TeacherPortalService {
    * PUT /api/teacher-portal/signature
    * Allows the logged-in teacher to update their signature URL string.
    */
+  /**
+   * GET /api/teacher-portal/profile
+   * Returns the logged-in teacher's own profile, including their saved signature.
+   */
+  static async getMyProfile(schoolId: string, userId: string) {
+    const teacher = await this.resolveTeacher(schoolId, userId);
+    if (!teacher) return failResponse("Teacher profile not found.");
+
+    return successResponse({
+      teacherId: teacher.id,
+      fullName: teacher.fullName,
+      email: teacher.email,
+      phone: teacher.phone,
+      profilePictureUrl: teacher.profilePictureUrl || "",
+      signatureUrl: teacher.signatureUrl || "",
+    }, "Teacher profile retrieved successfully.");
+  }
+
   static async updateTeacherSignature(schoolId: string, userId: string, signatureUrl: string) {
     const teacher = await this.resolveTeacher(schoolId, userId);
     if (!teacher) return failResponse("Teacher profile not found.");

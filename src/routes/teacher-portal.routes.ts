@@ -202,6 +202,20 @@ router.get("/score-progress", TeacherPortalController.getScoreProgress);
 
 /**
  * @swagger
+ * /api/teacher-portal/profile:
+ *   get:
+ *     summary: Get the authenticated teacher's own profile, including their saved signature
+ *     tags: [Teacher Portal]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Teacher profile retrieved successfully
+ */
+router.get("/profile", TeacherPortalController.getMyProfile);
+
+/**
+ * @swagger
  * /api/teacher-portal/signature:
  *   put:
  *     summary: Upload/update teacher signature URL

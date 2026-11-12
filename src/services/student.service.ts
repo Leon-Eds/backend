@@ -22,15 +22,17 @@ export class StudentService {
       parentEmail: parent?.email || "",
       parentRelationship: parent?.relationship || "",
       relationship: parent?.relationship || "",
+      parentAddress: parent?.address || "",
       // New parent object with full details
       parent: parent ? {
         id: parent.id,
         fullName: parent.fullName,
-        email: parent.email,
+        email: parent.email || "",
         phone: parent.phone,
         passportUrl: parent.passportUrl || "",
         idNumber: parent.idNumber || "",
         relationship: parent.relationship || "",
+        address: parent.address || "",
       } : null,
       status: s.status,
       classId: s.classId,
@@ -44,28 +46,36 @@ export class StudentService {
   }
 
   /**
-   * Find an existing parent by email within a school, or create a new one.
+   * Find an existing parent within a school, or create a new one.
+   * Parents are matched by email, or by phone when no email is given.
+   * Returns null only when no parent details were provided at all.
    */
   private static async findOrCreateParent(
     schoolId: string,
-    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string; parentRelationship?: string },
+    data: { parentName: string; parentEmail: string; parentPhone?: string; parentPassportUrl?: string; parentIdNumber?: string; parentRelationship?: string; parentAddress?: string },
     client: Prisma.TransactionClient | typeof prisma = prisma
   ) {
-    if (!data.parentEmail || data.parentEmail.trim() === "") {
+    const name = (data.parentName || "").trim();
+    const email = (data.parentEmail || "").trim().toLowerCase();
+    const phone = (data.parentPhone || "").trim();
+
+    if (!name && !email && !phone) {
       return null;
     }
 
-    const email = data.parentEmail.trim().toLowerCase();
-
     // Check if parent already exists in this school
-    let parent = await client.parent.findUnique({
-      where: {
-        schoolId_email: {
-          schoolId,
-          email,
-        },
-      },
-    });
+    let parent = email
+      ? await client.parent.findUnique({
+          where: {
+            schoolId_email: {
+              schoolId,
+              email,
+            },
+          },
+        })
+      : phone
+        ? await client.parent.findFirst({ where: { schoolId, email: null, phone } })
+        : null;
 
     if (parent) {
       // Update parent details if new info is provided
@@ -85,6 +95,9 @@ export class StudentService {
       if (data.parentRelationship !== undefined && data.parentRelationship !== parent.relationship) {
         updateData.relationship = data.parentRelationship;
       }
+      if (data.parentAddress !== undefined && data.parentAddress !== parent.address) {
+        updateData.address = data.parentAddress;
+      }
 
       if (Object.keys(updateData).length > 0) {
         parent = await client.parent.update({
@@ -100,12 +113,13 @@ export class StudentService {
     parent = await client.parent.create({
       data: {
         schoolId,
-        fullName: data.parentName || "",
-        email,
-        phone: data.parentPhone || "",
+        fullName: name,
+        email: email || null,
+        phone,
         passportUrl: data.parentPassportUrl || "",
         idNumber: data.parentIdNumber || "",
         relationship: data.parentRelationship || "",
+        address: data.parentAddress || "",
       },
     });
 
@@ -286,6 +300,7 @@ export class StudentService {
         parentPassportUrl: request.parentPassportUrl || "",
         parentIdNumber: request.parentIdNumber || "",
         parentRelationship,
+        parentAddress: request.parentAddress || "",
       }, tx);
 
       const student = await tx.student.create({
@@ -376,7 +391,8 @@ export class StudentService {
       request.parentPassportUrl !== undefined ||
       request.parentIdNumber !== undefined ||
       request.parentRelationship !== undefined ||
-      request.relationship !== undefined;
+      request.relationship !== undefined ||
+      request.parentAddress !== undefined;
 
     if (hasParentUpdate) {
       const parentEmail = request.parentEmail !== undefined
@@ -399,21 +415,21 @@ export class StudentService {
         : (request.parentRelationship !== undefined
             ? request.parentRelationship
             : (student.parent?.relationship || ""));
+      const parentAddress = request.parentAddress !== undefined
+        ? request.parentAddress
+        : (student.parent?.address || "");
 
-      if (parentEmail && parentEmail.trim() !== "") {
-        const parent = await this.findOrCreateParent(schoolId, {
-          parentName,
-          parentEmail,
-          parentPhone,
-          parentPassportUrl,
-          parentIdNumber,
-          parentRelationship,
-        });
-        newParentId = parent?.id || null;
-      } else {
-        // Email cleared — unlink parent
-        newParentId = null;
-      }
+      // Returns null (unlinking the parent) only when name, email and phone are all cleared
+      const parent = await this.findOrCreateParent(schoolId, {
+        parentName,
+        parentEmail,
+        parentPhone,
+        parentPassportUrl,
+        parentIdNumber,
+        parentRelationship,
+        parentAddress,
+      });
+      newParentId = parent?.id || null;
     }
 
     const dob = request.dateOfBirth !== undefined ? (request.dateOfBirth ? new Date(request.dateOfBirth) : null) : undefined;

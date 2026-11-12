@@ -185,11 +185,12 @@ model Parent {
   id                String    @id @default(uuid()) @db.Uuid
   schoolId          String    @db.Uuid
   fullName          String    @db.VarChar(200)
-  email             String    @db.VarChar(200)
+  email             String?   @db.VarChar(200) /// Optional: parents may be registered with only a name or phone
   phone             String    @default("") @db.VarChar(30)
   passportUrl       String    @default("") @db.VarChar(500)
   idNumber          String    @default("") @db.VarChar(100)
   relationship      String    @default("") @db.VarChar(50) /// e.g. Father, Mother, Guardian
+  address           String    @default("") @db.VarChar(500)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime? @updatedAt
 

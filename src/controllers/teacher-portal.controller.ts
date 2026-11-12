@@ -67,6 +67,17 @@ export class TeacherPortalController {
     }
   }
 
+  static async getMyProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const schoolId = req.schoolId!;
+      const userId = req.user?.id!;
+      const result = await TeacherPortalService.getMyProfile(schoolId, userId);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async updateSignature(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const schoolId = req.schoolId!;

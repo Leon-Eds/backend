@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Parent" ADD COLUMN     "address" VARCHAR(500) NOT NULL DEFAULT '',
+ALTER COLUMN "email" DROP NOT NULL;
+
