@@ -144,13 +144,50 @@ export class StudentService {
     const pageNumber = isAll ? 1 : parseInt(params.pageNumber || "1", 10);
     const pageSize = isAll ? (totalCount || 1) : parseInt(params.pageSize || "20", 10);
 
+    const paging: { skip?: number; take?: number } = isAll ? {} : { skip: (pageNumber - 1) * pageSize, take: pageSize };
+
+    // view=summary: just what lists and pickers need, without the login and parent records
+    if (params.view === "summary") {
+      const rows = await prisma.student.findMany({
+        where,
+        orderBy: { enrolledAt: "desc" },
+        ...paging,
+        select: {
+          id: true,
+          userId: true,
+          fullName: true,
+          admissionNumber: true,
+          gender: true,
+          status: true,
+          classId: true,
+          arm: true,
+          profilePictureUrl: true,
+          enrolledAt: true,
+          class: { select: { name: true, arm: true } },
+        },
+      });
+      const summaries = rows.map((s) => ({
+        id: s.id,
+        userId: s.userId,
+        fullName: s.fullName,
+        admissionNumber: s.admissionNumber,
+        gender: s.gender,
+        status: s.status,
+        classId: s.classId,
+        className: s.class ? `${s.class.name} ${s.class.arm}`.trim() : null,
+        classLevel: s.class?.name || null,
+        arm: s.arm || null,
+        profilePictureUrl: s.profilePictureUrl || "",
+        enrolledAt: s.enrolledAt,
+        createdAt: s.enrolledAt,
+      }));
+      return successResponse(createPagedResult(summaries, totalCount, pageNumber, pageSize));
+    }
+
     const students = await prisma.student.findMany({
       where,
       orderBy: { enrolledAt: "desc" },
-      ...(isAll ? {} : {
-        skip: (pageNumber - 1) * pageSize,
-        take: pageSize,
-      }),
+      ...paging,
       include: {
         class: true,
         user: true,

@@ -104,7 +104,9 @@ const swaggerOptions = {
   ],
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+// Built on first request rather than at startup: parsing every route file's docs slowed cold starts
+let swaggerSpec: object | null = null;
+const getSwaggerSpec = () => (swaggerSpec ??= swaggerJsdoc(swaggerOptions));
 
 app.use(["/api-docs/json", "/swagger", "/api-docs"], (_req, res, next) => {
   const documentationEnabled = process.env.NODE_ENV !== "production" || process.env.EXPOSE_API_DOCS === "true";
@@ -115,7 +117,7 @@ app.use(["/api-docs/json", "/swagger", "/api-docs"], (_req, res, next) => {
 // Serve the raw OpenAPI spec JSON
 app.get("/api-docs/json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
-  res.send(swaggerSpec);
+  res.send(getSwaggerSpec());
 });
 
 // Serve Swagger UI page using CDN assets (completely resolves Vercel serverless asset issues)

@@ -692,3 +692,13 @@ model SchemeOfWork {
   @@unique([schoolId, classId, subjectId, termId])
   @@index([schoolId, classId, termId])
 }
+
+/// Request counts for rate limiting, shared by every serverless instance
+/// (in-memory counters reset whenever Vercel starts a new instance).
+model RateLimitBucket {
+  key     String   @id @db.VarChar(200) /// "<limiter>:<client ip>"
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}

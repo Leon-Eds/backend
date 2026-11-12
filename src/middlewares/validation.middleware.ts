@@ -9,7 +9,7 @@ export function validateBody(schema: ZodSchema) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errors = error.errors.map((e) => `${e.path.join(".")}: ${e.message}`);
+        const errors = error.issues.map((e) => `${e.path.join(".")}: ${e.message}`);
         return res.status(400).json(failResponse("Validation failed", errors));
       }
       next(error);

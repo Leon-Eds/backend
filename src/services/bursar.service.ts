@@ -299,6 +299,15 @@ export class BursarService {
       return failResponse("Student not found in this school.");
     }
 
+    // The term must belong to this school; its session is taken from the term itself
+    const term = await prisma.term.findFirst({
+      where: { id: request.termId, academicSession: { schoolId } },
+      select: { id: true, academicSessionId: true },
+    });
+    if (!term) {
+      return failResponse("Term not found in this school.");
+    }
+
     const existing = await prisma.feePayment.findFirst({
       where: {
         schoolId,
@@ -327,8 +336,8 @@ export class BursarService {
         data: {
           schoolId,
           studentId: request.studentId,
-          termId: request.termId,
-          academicSessionId: request.academicSessionId,
+          termId: term.id,
+          academicSessionId: term.academicSessionId,
           amountDue: request.amountDue,
           amountPaid: request.amountPaid,
           receiptImageUrl: request.receiptImageUrl || "",
