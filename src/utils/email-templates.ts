@@ -97,6 +97,16 @@ function wrapInShell(title: string, headerTitle: string, bodyHtml: string): stri
           font-weight: 500;
           font-size: 15px;
         }
+        .alert-box-danger {
+          background-color: #fef2f2;
+          border-left: 4px solid #b91c1c;
+          border-radius: 4px;
+          padding: 16px;
+          margin: 24px 0;
+          color: #b91c1c;
+          font-weight: 500;
+          font-size: 15px;
+        }
         .card {
           background-color: #f9fafb;
           border-radius: 10px;
@@ -876,8 +886,10 @@ export const emailTemplates = {
         ? `⚠ ${studentName} checked in late at school${formattedTime ? ` at ${formattedTime}` : ""}.`
         : `✓ ${studentName} checked in at school${formattedTime ? ` at ${formattedTime}` : ""}.`;
     } else if (details.event === "checkOut") {
-      statusCopy.boxClass = "alert-box";
-      statusCopy.message = `✓ ${studentName} checked out of school${formattedTime ? ` at ${formattedTime}` : ""}.`;
+      statusCopy.label = "Checked Out";
+      statusCopy.color = "#b91c1c";
+      statusCopy.boxClass = "alert-box-danger";
+      statusCopy.message = `${studentName} checked out of school${formattedTime ? ` at ${formattedTime}` : ""}.`;
     }
     const timeLabel = details.event === "checkIn" ? "Checked In:" : details.event === "checkOut" ? "Checked Out:" : "Time Marked:";
 

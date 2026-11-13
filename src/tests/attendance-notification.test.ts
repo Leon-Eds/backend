@@ -314,6 +314,8 @@ test("check-in and check-out emails say when the student arrived and left", () =
   });
   assert.match(checkOut.subject, /Ada Obi checked out/);
   assert.match(checkOut.html, /Checked Out:[\s\S]*2:15\s?pm \(WAT\)/i);
+  assert.match(checkOut.html, /alert-box-danger/);
+  assert.match(checkOut.html, /color: #b91c1c;"><strong>Checked Out<\/strong>/);
 });
 
 // DEMO: repeat check-ins re-send the check-in email on every scan
